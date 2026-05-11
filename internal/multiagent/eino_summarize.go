@@ -214,7 +214,7 @@ func summarizeFinalizeWithRecentAssistantToolTrail(
 		selectedCount++
 	}
 
-	// 还原时间顺序
+	// 还原时间顺序。round 内为原始 *schema.Message 指针，保留 ReasoningContent（DeepSeek 工具续跑所必需）。
 	selectedMsgs := make([]adk.Message, 0, 8)
 	for i := len(selectedRoundsReverse) - 1; i >= 0; i-- {
 		selectedMsgs = append(selectedMsgs, selectedRoundsReverse[i].messages...)

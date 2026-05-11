@@ -13,6 +13,7 @@ import (
 	"cyberstrike-ai/internal/config"
 	"cyberstrike-ai/internal/einomcp"
 	"cyberstrike-ai/internal/openai"
+	"cyberstrike-ai/internal/reasoning"
 
 	einoopenai "github.com/cloudwego/eino-ext/components/model/openai"
 	"github.com/cloudwego/eino/adk"
@@ -37,6 +38,7 @@ func RunEinoSingleChatModelAgent(
 	history []agent.ChatMessage,
 	roleTools []string,
 	progress func(eventType, message string, data interface{}),
+	reasoningClient *reasoning.ClientIntent,
 ) (*RunResult, error) {
 	if appCfg == nil || ag == nil {
 		return nil, fmt.Errorf("eino single: 配置或 Agent 为空")
@@ -121,6 +123,7 @@ func RunEinoSingleChatModelAgent(
 		Model:      appCfg.OpenAI.Model,
 		HTTPClient: httpClient,
 	}
+	reasoning.ApplyToEinoChatModelConfig(baseModelCfg, &appCfg.OpenAI, reasoningClient)
 
 	mainModel, err := einoopenai.NewChatModel(ctx, baseModelCfg)
 	if err != nil {

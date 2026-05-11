@@ -17,6 +17,7 @@ import (
 	"cyberstrike-ai/internal/config"
 	"cyberstrike-ai/internal/einomcp"
 	"cyberstrike-ai/internal/openai"
+	"cyberstrike-ai/internal/reasoning"
 
 	einoopenai "github.com/cloudwego/eino-ext/components/model/openai"
 	"github.com/cloudwego/eino/adk"
@@ -48,6 +49,7 @@ type toolCallPendingInfo struct {
 
 // RunDeepAgent 使用 Eino 多代理预置编排执行一轮对话（deep / plan_execute / supervisor；流式事件通过 progress 回调输出）。
 // orchestrationOverride 非空时优先（如聊天/WebShell 请求体）；否则用 multi_agent.orchestration（遗留 yaml）；皆空则按 deep。
+// reasoningClient 来自 ChatRequest.reasoning；可为 nil（机器人/批量等走全局 openai.reasoning）。
 func RunDeepAgent(
 	ctx context.Context,
 	appCfg *config.Config,
@@ -61,6 +63,7 @@ func RunDeepAgent(
 	progress func(eventType, message string, data interface{}),
 	agentsMarkdownDir string,
 	orchestrationOverride string,
+	reasoningClient *reasoning.ClientIntent,
 ) (*RunResult, error) {
 	if appCfg == nil || ma == nil || ag == nil {
 		return nil, fmt.Errorf("multiagent: 配置或 Agent 为空")
@@ -163,6 +166,7 @@ func RunDeepAgent(
 		Model:      appCfg.OpenAI.Model,
 		HTTPClient: httpClient,
 	}
+	reasoning.ApplyToEinoChatModelConfig(baseModelCfg, &appCfg.OpenAI, reasoningClient)
 
 	deepMaxIter := ma.MaxIteration
 	if deepMaxIter <= 0 {
@@ -636,8 +640,13 @@ func historyToMessages(history []agent.ChatMessage, appCfg *config.Config, mwCfg
 			}
 		case "assistant":
 			toolSchema := chatToolCallsToSchema(h.ToolCalls)
-			if len(toolSchema) > 0 || strings.TrimSpace(h.Content) != "" {
-				raw = append(raw, schema.AssistantMessage(h.Content, toolSchema))
+			hasRC := strings.TrimSpace(h.ReasoningContent) != ""
+			if len(toolSchema) > 0 || strings.TrimSpace(h.Content) != "" || hasRC {
+				am := schema.AssistantMessage(h.Content, toolSchema)
+				if hasRC {
+					am.ReasoningContent = strings.TrimSpace(h.ReasoningContent)
+				}
+				raw = append(raw, am)
 			}
 		case "tool":
 			if strings.TrimSpace(h.ToolCallID) == "" && strings.TrimSpace(h.Content) == "" {

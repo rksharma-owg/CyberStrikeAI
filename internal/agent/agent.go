@@ -195,6 +195,8 @@ type ChatMessage struct {
 	ToolCallID string     `json:"tool_call_id,omitempty"`
 	// ToolName 仅 tool 角色：从 Eino/轨迹 JSON 的 name 或 tool_name 恢复，供续跑构造 ToolMessage。
 	ToolName string `json:"tool_name,omitempty"`
+	// ReasoningContent 对应 OpenAI/DeepSeek 的 reasoning_content；思考模式 + 工具调用后续跑须回传（见 DeepSeek 文档）。
+	ReasoningContent string `json:"reasoning_content,omitempty"`
 }
 
 // MarshalJSON 自定义JSON序列化，将tool_calls中的arguments转换为JSON字符串
@@ -207,6 +209,9 @@ func (cm ChatMessage) MarshalJSON() ([]byte, error) {
 	// 添加content（如果存在）
 	if cm.Content != "" {
 		aux["content"] = cm.Content
+	}
+	if cm.ReasoningContent != "" {
+		aux["reasoning_content"] = cm.ReasoningContent
 	}
 
 	// 添加tool_call_id（如果存在）
@@ -663,8 +668,8 @@ func (a *Agent) AgentLoopWithProgress(ctx context.Context, userInput string, his
 
 		// 检查是否有工具调用
 		if len(choice.Message.ToolCalls) > 0 {
-			// 思考内容：如果本轮启用了思考流式增量（thinking_stream_*），前端会去重；
-			// 同时也需要在该“思考阶段结束”时补一条可落库的 thinking（用于刷新后持久化展示）。
+			// ReAct 助手正文流式增量（thinking_stream_*）在 UI 上归为「思考」；若与 streamId 重复则前端会去重。
+			// 该条 thinking 用于刷新后持久化展示（与流式聚合一致）。
 			if choice.Message.Content != "" {
 				sendProgress("thinking", choice.Message.Content, map[string]interface{}{
 					"iteration": i + 1,

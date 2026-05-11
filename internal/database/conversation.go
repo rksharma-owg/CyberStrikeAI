@@ -25,14 +25,15 @@ type Conversation struct {
 
 // Message 消息
 type Message struct {
-	ID              string                   `json:"id"`
-	ConversationID  string                   `json:"conversationId"`
-	Role            string                   `json:"role"`
-	Content         string                   `json:"content"`
-	MCPExecutionIDs []string                 `json:"mcpExecutionIds,omitempty"`
-	ProcessDetails  []map[string]interface{} `json:"processDetails,omitempty"`
-	CreatedAt       time.Time                `json:"createdAt"`
-	UpdatedAt       time.Time                `json:"updatedAt"`
+	ID               string                   `json:"id"`
+	ConversationID string                   `json:"conversationId"`
+	Role             string                   `json:"role"`
+	Content          string                   `json:"content"`
+	ReasoningContent string                   `json:"reasoningContent,omitempty"`
+	MCPExecutionIDs  []string                 `json:"mcpExecutionIds,omitempty"`
+	ProcessDetails   []map[string]interface{} `json:"processDetails,omitempty"`
+	CreatedAt        time.Time                `json:"createdAt"`
+	UpdatedAt        time.Time                `json:"updatedAt"`
 }
 
 // CreateConversation 创建新对话
@@ -498,8 +499,8 @@ func (db *DB) AddMessage(conversationID, role, content string, mcpExecutionIDs [
 	}
 
 	_, err := db.Exec(
-		"INSERT INTO messages (id, conversation_id, role, content, mcp_execution_ids, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-		id, conversationID, role, content, mcpIDsJSON, now, now,
+		"INSERT INTO messages (id, conversation_id, role, content, reasoning_content, mcp_execution_ids, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+		id, conversationID, role, content, "", mcpIDsJSON, now, now,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("添加消息失败: %w", err)
@@ -523,10 +524,30 @@ func (db *DB) AddMessage(conversationID, role, content string, mcpExecutionIDs [
 	return message, nil
 }
 
+// UpdateAssistantMessageFinalize 更新助手消息终态（正文、MCP id、思考链聚合文本，供无轨迹回退时回放）。
+func (db *DB) UpdateAssistantMessageFinalize(messageID, content string, mcpExecutionIDs []string, reasoningContent string) error {
+	var mcpIDsJSON string
+	if len(mcpExecutionIDs) > 0 {
+		jsonData, err := json.Marshal(mcpExecutionIDs)
+		if err != nil {
+			return fmt.Errorf("序列化MCP执行ID失败: %w", err)
+		}
+		mcpIDsJSON = string(jsonData)
+	}
+	_, err := db.Exec(
+		"UPDATE messages SET content = ?, mcp_execution_ids = ?, reasoning_content = ?, updated_at = ? WHERE id = ?",
+		content, mcpIDsJSON, strings.TrimSpace(reasoningContent), time.Now(), messageID,
+	)
+	if err != nil {
+		return fmt.Errorf("更新助手消息失败: %w", err)
+	}
+	return nil
+}
+
 // GetMessages 获取对话的所有消息
 func (db *DB) GetMessages(conversationID string) ([]Message, error) {
 	rows, err := db.Query(
-		"SELECT id, conversation_id, role, content, mcp_execution_ids, created_at, updated_at FROM messages WHERE conversation_id = ? ORDER BY created_at ASC",
+		"SELECT id, conversation_id, role, content, reasoning_content, mcp_execution_ids, created_at, updated_at FROM messages WHERE conversation_id = ? ORDER BY created_at ASC",
 		conversationID,
 	)
 	if err != nil {
@@ -537,12 +558,16 @@ func (db *DB) GetMessages(conversationID string) ([]Message, error) {
 	var messages []Message
 	for rows.Next() {
 		var msg Message
+		var reasoning sql.NullString
 		var mcpIDsJSON sql.NullString
 		var createdAt string
 		var updatedAt sql.NullString
 
-		if err := rows.Scan(&msg.ID, &msg.ConversationID, &msg.Role, &msg.Content, &mcpIDsJSON, &createdAt, &updatedAt); err != nil {
+		if err := rows.Scan(&msg.ID, &msg.ConversationID, &msg.Role, &msg.Content, &reasoning, &mcpIDsJSON, &createdAt, &updatedAt); err != nil {
 			return nil, fmt.Errorf("扫描消息失败: %w", err)
+		}
+		if reasoning.Valid {
+			msg.ReasoningContent = reasoning.String
 		}
 
 		// 尝试多种时间格式解析
@@ -683,7 +708,7 @@ type ProcessDetail struct {
 	ID             string    `json:"id"`
 	MessageID      string    `json:"messageId"`
 	ConversationID string    `json:"conversationId"`
-	EventType      string    `json:"eventType"` // iteration, thinking, tool_calls_detected, tool_call, tool_result, progress, error
+	EventType      string    `json:"eventType"` // iteration, thinking, reasoning_chain, tool_calls_detected, tool_call, tool_result, progress, error
 	Message        string    `json:"message"`
 	Data           string    `json:"data"` // JSON格式的数据
 	CreatedAt      time.Time `json:"createdAt"`

@@ -15,6 +15,7 @@ import (
 
 	"cyberstrike-ai/internal/agent"
 	"cyberstrike-ai/internal/einomcp"
+	"cyberstrike-ai/internal/openai"
 
 	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/schema"
@@ -550,6 +551,7 @@ func runEinoADKAgentLoop(ctx context.Context, args *einoADKRunLoopArgs, baseMsgs
 			var mainAssistantBuf string
 			var mainAssistDupTarget string // 非空表示本段主助手流需缓冲至 EOF，与 execute 输出比对去重
 			var reasoningBuf string
+			var prevReasoningDisplay string // UI 用：剥离 Claude 内部 signature 尾缀后的累计展示
 			var streamRecvErr error
 			type streamMsg struct {
 				chunk *schema.Message
@@ -597,19 +599,29 @@ func runEinoADKAgentLoop(ctx context.Context, args *einoADKRunLoopArgs, baseMsgs
 						var reasoningDelta string
 						reasoningBuf, reasoningDelta = normalizeStreamingDelta(reasoningBuf, chunk.ReasoningContent)
 						if reasoningDelta != "" {
-							if reasoningStreamID == "" {
-								reasoningStreamID = fmt.Sprintf("eino-reasoning-%s-%d", conversationID, atomic.AddInt64(&reasoningStreamSeq, 1))
-								progress("thinking_stream_start", " ", map[string]interface{}{
-									"streamId":      reasoningStreamID,
-									"source":        "eino",
-									"einoAgent":     ev.AgentName,
-									"einoRole":      einoRoleTag(ev.AgentName),
-									"orchestration": orchMode,
+							fullDisplay := openai.DisplayReasoningContent(reasoningBuf)
+							var displayDelta string
+							if strings.HasPrefix(fullDisplay, prevReasoningDisplay) {
+								displayDelta = fullDisplay[len(prevReasoningDisplay):]
+							} else {
+								displayDelta = fullDisplay
+							}
+							prevReasoningDisplay = fullDisplay
+							if displayDelta != "" {
+								if reasoningStreamID == "" {
+									reasoningStreamID = fmt.Sprintf("eino-reasoning-%s-%d", conversationID, atomic.AddInt64(&reasoningStreamSeq, 1))
+									progress("reasoning_chain_stream_start", " ", map[string]interface{}{
+										"streamId":      reasoningStreamID,
+										"source":        "eino",
+										"einoAgent":     ev.AgentName,
+										"einoRole":      einoRoleTag(ev.AgentName),
+										"orchestration": orchMode,
+									})
+								}
+								progress("reasoning_chain_stream_delta", displayDelta, map[string]interface{}{
+									"streamId": reasoningStreamID,
 								})
 							}
-							progress("thinking_stream_delta", reasoningDelta, map[string]interface{}{
-								"streamId": reasoningStreamID,
-							})
 						}
 					}
 					if chunk.Content != "" {
@@ -777,7 +789,7 @@ func runEinoADKAgentLoop(ctx context.Context, args *einoADKRunLoopArgs, baseMsgs
 
 		if mv.Role == schema.Assistant {
 			if progress != nil && strings.TrimSpace(msg.ReasoningContent) != "" {
-				progress("thinking", strings.TrimSpace(msg.ReasoningContent), map[string]interface{}{
+				progress("reasoning_chain", openai.DisplayReasoningContent(strings.TrimSpace(msg.ReasoningContent)), map[string]interface{}{
 					"conversationId": conversationID,
 					"source":         "eino",
 					"einoAgent":      ev.AgentName,

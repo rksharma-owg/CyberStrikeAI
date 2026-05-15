@@ -202,7 +202,6 @@ async function refreshDashboard() {
             openHighCount = pickOpenCount(openHighRes, highCount);
             openMediumCount = pickOpenCount(openMediumRes, mediumCount);
             openLowCount = pickOpenCount(openLowRes, lowCount);
-            if (severityTotalEl) severityTotalEl.textContent = String(total);
             severityIds.forEach(sev => {
                 const count = bySeverity[sev] || 0;
                 const el = document.getElementById('dashboard-severity-' + sev);
@@ -1416,13 +1415,16 @@ var SEVERITY_DONUT_CFG = {
     gapRad: 0.012
 };
 
+// 三段渐变：[高光浅调, 中段饱和色, 深色边缘] —— 做出类似 3D 釉面的层次
 var SEVERITY_DONUT_GRADIENTS = {
-    critical: ['#fca5a5', '#ef4444'],
-    high: ['#fdba74', '#f97316'],
-    medium: ['#fde047', '#eab308'],
-    low: ['#5eead4', '#14b8a6'],
-    info: ['#93c5fd', '#3b82f6']
+    critical: ['#fecaca', '#f87171', '#dc2626'],
+    high: ['#fed7aa', '#fb923c', '#ea580c'],
+    medium: ['#fef08a', '#facc15', '#ca8a04'],
+    low: ['#99f6e4', '#2dd4bf', '#0f766e'],
+    info: ['#bfdbfe', '#60a5fa', '#2563eb']
 };
+
+var severityDonutCenterDisplayed = { total: null, hoverCount: null };
 
 var severityDonutState = {
     bySeverity: {},
@@ -1433,6 +1435,7 @@ var severityDonutState = {
 
 var severityDonutTooltipEl = null;
 var severityDonutTooltipTimer = null;
+var severityDonutHoverClearTimer = null;
 
 var SEVERITY_DEFAULT_LABELS = {
     critical: '严重',
@@ -1451,15 +1454,37 @@ function severityLabel(id) {
     return SEVERITY_DEFAULT_LABELS[id] || id;
 }
 
-function ensureSeverityDonutGradients() {
+function ensureSeverityDonutDefs() {
     var defsEl = document.getElementById('dashboard-severity-donut-defs');
     if (!defsEl || defsEl.hasChildNodes()) return;
     var html = '';
+    html += '<linearGradient id="donut-track-face" x1="0%" y1="0%" x2="0%" y2="100%">';
+    html += '<stop offset="0%" stop-color="#f8fafc"/>';
+    html += '<stop offset="55%" stop-color="#e8eef5"/>';
+    html += '<stop offset="100%" stop-color="#dce5ef"/>';
+    html += '</linearGradient>';
+    html += '<radialGradient id="donut-track-vignette" cx="50%" cy="85%" r="75%" fx="50%" fy="85%">';
+    html += '<stop offset="0%" stop-color="#ffffff" stop-opacity="0.35"/>';
+    html += '<stop offset="70%" stop-color="#ffffff" stop-opacity="0"/>';
+    html += '</radialGradient>';
+    html += '<radialGradient id="donut-inner-gloss" cx="35%" cy="75%" r="55%">';
+    html += '<stop offset="0%" stop-color="#ffffff" stop-opacity="0.45"/>';
+    html += '<stop offset="55%" stop-color="#ffffff" stop-opacity="0.08"/>';
+    html += '<stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>';
+    html += '</radialGradient>';
+    html += '<filter id="donut-segment-soften" x="-18%" y="-18%" width="136%" height="136%" color-interpolation-filters="sRGB">';
+    html += '<feGaussianBlur in="SourceAlpha" stdDeviation="0.8" result="blur"/>';
+    html += '<feOffset dx="0" dy="1.5" in="blur" result="off"/>';
+    html += '<feFlood flood-color="#0f172a" flood-opacity="0.13" result="flood"/>';
+    html += '<feComposite in="flood" in2="off" operator="in" result="shadow"/>';
+    html += '<feMerge><feMergeNode in="shadow"/><feMergeNode in="SourceGraphic"/></feMerge>';
+    html += '</filter>';
     Object.keys(SEVERITY_DONUT_GRADIENTS).forEach(function (id) {
         var stops = SEVERITY_DONUT_GRADIENTS[id];
-        html += '<linearGradient id="donut-grad-' + id + '" x1="0%" y1="0%" x2="100%" y2="100%">';
+        html += '<linearGradient id="donut-grad-' + id + '" x1="18%" y1="12%" x2="88%" y2="94%">';
         html += '<stop offset="0%" stop-color="' + stops[0] + '"/>';
-        html += '<stop offset="100%" stop-color="' + stops[1] + '"/>';
+        html += '<stop offset="52%" stop-color="' + stops[1] + '"/>';
+        html += '<stop offset="100%" stop-color="' + stops[2] + '"/>';
         html += '</linearGradient>';
     });
     defsEl.innerHTML = html;
@@ -1470,20 +1495,24 @@ function renderSeverityDonut(bySeverity, total) {
     var trackEl = document.getElementById('dashboard-severity-donut-track');
     var leadersEl = document.getElementById('dashboard-severity-donut-leaders');
     var segmentsEl = document.getElementById('dashboard-severity-donut-segments');
+    var hitsEl = document.getElementById('dashboard-severity-donut-hits');
     var labelsEl = document.getElementById('dashboard-severity-donut-labels');
     if (!trackEl || !segmentsEl || !labelsEl) return;
 
     severityDonutState.bySeverity = bySeverity && typeof bySeverity === 'object' ? bySeverity : {};
     severityDonutState.total = total || 0;
     severityDonutState.hoverId = null;
-    resetSeverityDonutCenter();
 
     var cfg = SEVERITY_DONUT_CFG;
-    ensureSeverityDonutGradients();
+    ensureSeverityDonutDefs();
 
-    // 背景轨迹（完整半环）只渲染一次
+    // 背景轨迹（完整半环）：双层填充营造凹槽 + 高光
     if (!trackEl.hasChildNodes()) {
-        trackEl.innerHTML = '<path class="donut-track" d="' + halfRingPath(cfg.cx, cfg.cy, cfg.rOuter, cfg.rInner) + '"/>';
+        var trackPath = halfRingPath(cfg.cx, cfg.cy, cfg.rOuter, cfg.rInner);
+        trackEl.innerHTML =
+            '<path class="donut-track-shadow" d="' + trackPath + '"/>' +
+            '<path class="donut-track" fill="url(#donut-track-face)" d="' + trackPath + '"/>' +
+            '<path class="donut-track-vignette" fill="url(#donut-track-vignette)" d="' + trackPath + '"/>';
     }
 
     var ids = ['critical', 'high', 'medium', 'low', 'info'];
@@ -1492,14 +1521,23 @@ function renderSeverityDonut(bySeverity, total) {
     });
     var visible = severities.filter(function (s) { return s.value > 0; });
 
-    if (svgEl) svgEl.classList.remove('is-highlighting');
+    if (svgEl) {
+        svgEl.classList.remove('is-highlighting');
+        svgEl.removeAttribute('data-hover-severity');
+    }
     if (!total || total <= 0 || visible.length === 0) {
         segmentsEl.innerHTML = '';
+        if (hitsEl) hitsEl.innerHTML = '';
         labelsEl.innerHTML = '';
         if (leadersEl) leadersEl.innerHTML = '';
         clearSeverityDonutLegendHighlight();
+        resetSeverityDonutCenter(false);
+        _clearSeverityDonutChartWrapHover();
+        if (svgEl) svgEl.classList.remove('donut-ready');
         return;
     }
+
+    resetSeverityDonutCenter(true);
 
     // 弧长按 value/total 计算；若严重度求和 < total（存在未分级），右侧会保留背景轨迹的空白
     var sumVisible = visible.reduce(function (s, seg) { return s + seg.value; }, 0);
@@ -1510,6 +1548,8 @@ function renderSeverityDonut(bySeverity, total) {
     var arcsTotalRad = Math.max(0, Math.PI * coverage - totalGapRad);
 
     var segmentsHtml = '';
+    var hitsHtml = '';
+    var glossHtml = '';
     var labelsHtml = '';
     var leadersHtml = '';
     var cumRad = 0;
@@ -1525,7 +1565,9 @@ function renderSeverityDonut(bySeverity, total) {
         var pctRounded = Math.round(pctOfTotal);
         var name = esc(severityLabel(seg.id));
         var ariaLabel = name + ' ' + seg.value + ' (' + pctRounded + '%)';
-        segmentsHtml += '<path class="donut-segment seg-' + seg.id + '" data-severity="' + seg.id + '" data-count="' + seg.value + '" data-pct="' + pctRounded + '" fill="url(#donut-grad-' + seg.id + ')" d="' + path + '" tabindex="0" role="button" aria-label="' + ariaLabel + '"/>';
+        segmentsHtml += '<path class="donut-segment seg-' + seg.id + '" data-severity="' + seg.id + '" data-count="' + seg.value + '" data-pct="' + pctRounded + '" fill="url(#donut-grad-' + seg.id + ')" d="' + path + '"/>';
+        hitsHtml += '<path class="donut-segment-hit seg-' + seg.id + '" data-severity="' + seg.id + '" fill="transparent" d="' + path + '" tabindex="0" role="button" aria-label="' + ariaLabel + '"/>';
+        glossHtml += '<path class="donut-segment-gloss seg-' + seg.id + '" data-severity="' + seg.id + '" fill="url(#donut-inner-gloss)" d="' + arcSegmentPath(cfg.cx, cfg.cy, cfg.rOuter - 2, cfg.rInner + 6, angleStart, angleEnd) + '" pointer-events="none"/>';
 
         // 仅当占比 >= 5% 时显示外置标签，避免小段标签互相重叠
         if (pctOfTotal >= 5) {
@@ -1547,7 +1589,7 @@ function renderSeverityDonut(bySeverity, total) {
             var lineY1 = cfg.cy - arcR * sinMid;
             var lineX2 = cfg.cx + (cfg.rOuter + cfg.labelOffset - 2) * cosMid;
             var lineY2 = cfg.cy - (cfg.rOuter + cfg.labelOffset - 2) * sinMid;
-            leadersHtml += '<line class="donut-leader label-' + seg.id + '" data-severity="' + seg.id + '" x1="' + lineX1.toFixed(1) + '" y1="' + lineY1.toFixed(1) + '" x2="' + lineX2.toFixed(1) + '" y2="' + lineY2.toFixed(1) + '"/>';
+            leadersHtml += '<line class="donut-leader label-' + seg.id + '" data-severity="' + seg.id + '" pathLength="100" x1="' + lineX1.toFixed(1) + '" y1="' + lineY1.toFixed(1) + '" x2="' + lineX2.toFixed(1) + '" y2="' + lineY2.toFixed(1) + '"/>';
 
             labelsHtml += '<text class="donut-label-text label-' + seg.id + '" data-severity="' + seg.id + '" text-anchor="' + anchor + '" x="' + lx.toFixed(1) + '" y="' + ly.toFixed(1) + '">';
             labelsHtml += '<tspan x="' + lx.toFixed(1) + '" dy="0">' + seg.value + ' <tspan class="donut-label-pct">(' + pctText + ')</tspan></tspan>';
@@ -1560,20 +1602,66 @@ function renderSeverityDonut(bySeverity, total) {
     });
 
     if (leadersEl) leadersEl.innerHTML = leadersHtml;
-    segmentsEl.innerHTML = segmentsHtml;
+    segmentsEl.innerHTML = segmentsHtml + glossHtml;
+    if (hitsEl) hitsEl.innerHTML = hitsHtml;
     labelsEl.innerHTML = labelsHtml;
-    if (svgEl) svgEl.classList.add('donut-ready');
+    if (svgEl) {
+        svgEl.classList.remove('donut-ready');
+        void svgEl.offsetWidth;
+        requestAnimationFrame(function () {
+            svgEl.classList.add('donut-ready');
+        });
+    }
+    scheduleSeverityCenterCountUp(total);
     attachSeverityDonutInteractivity();
 }
 
-function resetSeverityDonutCenter() {
+function scheduleSeverityCenterCountUp(targetTotal) {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        var totalEl = document.getElementById('dashboard-severity-total');
+        if (totalEl) totalEl.textContent = String(targetTotal);
+        severityDonutCenterDisplayed.total = targetTotal;
+        return;
+    }
+    var totalEl = document.getElementById('dashboard-severity-total');
+    if (!totalEl || severityDonutState.hoverId) return;
+    var from = typeof severityDonutCenterDisplayed.total === 'number' ? severityDonutCenterDisplayed.total : 0;
+    var to = targetTotal;
+    if (from === to) {
+        totalEl.textContent = String(to);
+        severityDonutCenterDisplayed.total = to;
+        return;
+    }
+    var start = null;
+    var dur = Math.min(520, 180 + Math.abs(to - from) * 28);
+    function tick(now) {
+        if (!start) start = now;
+        var t = Math.min(1, (now - start) / dur);
+        var eased = 1 - Math.pow(1 - t, 3);
+        var val = Math.round(from + (to - from) * eased);
+        totalEl.textContent = String(val);
+        if (t < 1) {
+            requestAnimationFrame(tick);
+        } else {
+            totalEl.textContent = String(to);
+            severityDonutCenterDisplayed.total = to;
+        }
+    }
+    requestAnimationFrame(tick);
+}
+
+function resetSeverityDonutCenter(skipTotalSnapshot) {
     var totalEl = document.getElementById('dashboard-severity-total');
     var labelEl = document.getElementById('dashboard-severity-center-label');
     var centerEl = document.getElementById('dashboard-severity-center');
-    if (totalEl) totalEl.textContent = String(severityDonutState.total || 0);
+    var n = severityDonutState.total || 0;
+    if (!skipTotalSnapshot && totalEl) totalEl.textContent = String(n);
+    if (!skipTotalSnapshot) severityDonutCenterDisplayed.total = n;
+    severityDonutCenterDisplayed.hoverCount = null;
     if (labelEl) {
         labelEl.textContent = (typeof window.t === 'function' ? window.t('dashboard.totalVulns') : '总漏洞数');
         labelEl.classList.remove('is-severity');
+        labelEl.removeAttribute('data-severity');
     }
     if (centerEl) centerEl.classList.remove('is-hovering');
 }
@@ -1585,28 +1673,46 @@ function setSeverityDonutHover(severityId) {
     var labelEl = document.getElementById('dashboard-severity-center-label');
     if (!severityId) {
         severityDonutState.hoverId = null;
-        if (svgEl) svgEl.classList.remove('is-highlighting');
+        if (svgEl) {
+            svgEl.classList.remove('is-highlighting');
+            svgEl.removeAttribute('data-hover-severity');
+        }
         clearSeverityDonutLegendHighlight();
-        resetSeverityDonutCenter();
+        resetSeverityDonutCenter(false);
+        _clearSeverityDonutChartWrapHover();
         return;
     }
     var count = (severityDonutState.bySeverity && severityDonutState.bySeverity[severityId]) || 0;
     severityDonutState.hoverId = severityId;
-    if (svgEl) svgEl.classList.add('is-highlighting');
+    if (svgEl) {
+        svgEl.classList.add('is-highlighting');
+        svgEl.setAttribute('data-hover-severity', severityId);
+    }
     highlightSeverityDonutParts(severityId);
     highlightSeverityLegendItem(severityId);
-    if (totalEl) totalEl.textContent = String(count);
+    if (totalEl) {
+        totalEl.textContent = String(count);
+        severityDonutCenterDisplayed.hoverCount = count;
+    }
     if (labelEl) {
         labelEl.textContent = severityLabel(severityId);
         labelEl.classList.add('is-severity');
+        labelEl.setAttribute('data-severity', severityId);
     }
     if (centerEl) centerEl.classList.add('is-hovering');
+    var chartWrap = document.querySelector('.dashboard-severity-chart');
+    if (chartWrap) chartWrap.setAttribute('data-hover-severity', severityId);
+}
+
+function _clearSeverityDonutChartWrapHover() {
+    var chartWrap = document.querySelector('.dashboard-severity-chart');
+    if (chartWrap) chartWrap.removeAttribute('data-hover-severity');
 }
 
 function highlightSeverityDonutParts(severityId) {
     var svgEl = document.getElementById('dashboard-severity-donut');
     if (!svgEl) return;
-    svgEl.querySelectorAll('[data-severity]').forEach(function (el) {
+    svgEl.querySelectorAll('.donut-segment[data-severity], .donut-segment-gloss[data-severity], .donut-leader[data-severity], .donut-label-text[data-severity]').forEach(function (el) {
         var match = el.getAttribute('data-severity') === severityId;
         el.classList.toggle('is-active', match);
         el.classList.toggle('is-dimmed', !match);
@@ -1678,16 +1784,16 @@ function hideSeverityDonutTooltip() {
 }
 
 function attachSeverityDonutInteractivity() {
-    var svgEl = document.getElementById('dashboard-severity-donut');
+    var hitsEl = document.getElementById('dashboard-severity-donut-hits');
     var legend = document.getElementById('dashboard-vuln-bars');
-    if (!svgEl) return;
+    if (!hitsEl) return;
 
     if (!severityDonutState.bound) {
         severityDonutState.bound = true;
-        svgEl.addEventListener('mouseover', severityDonutPointerOver);
-        svgEl.addEventListener('mouseout', severityDonutPointerOut);
-        svgEl.addEventListener('click', severityDonutClick);
-        svgEl.addEventListener('keydown', severityDonutKeydown);
+        hitsEl.addEventListener('mouseover', severityDonutPointerOver);
+        hitsEl.addEventListener('mouseout', severityDonutPointerOut);
+        hitsEl.addEventListener('click', severityDonutClick);
+        hitsEl.addEventListener('keydown', severityDonutKeydown);
         if (legend) {
             legend.addEventListener('mouseover', severityLegendPointerOver);
             legend.addEventListener('mouseout', severityLegendPointerOut);
@@ -1705,30 +1811,50 @@ function attachSeverityDonutInteractivity() {
     });
 }
 
-function severityDonutTarget(el) {
-    return el && el.closest && el.closest('[data-severity]');
+function severityDonutHitTarget(el) {
+    return el && el.closest && el.closest('.donut-segment-hit');
+}
+
+function severityDonutCancelHoverClear() {
+    clearTimeout(severityDonutHoverClearTimer);
+    severityDonutHoverClearTimer = null;
+}
+
+function severityDonutScheduleHoverClear() {
+    severityDonutCancelHoverClear();
+    severityDonutHoverClearTimer = setTimeout(function () {
+        severityDonutHoverClearTimer = null;
+        setSeverityDonutHover(null);
+        hideSeverityDonutTooltip();
+    }, 60);
 }
 
 function severityDonutPointerOver(ev) {
-    var target = severityDonutTarget(ev.target);
-    if (!target || !target.classList.contains('donut-segment')) return;
+    var target = severityDonutHitTarget(ev.target);
+    if (!target) return;
     var id = target.getAttribute('data-severity');
     if (!id) return;
+    severityDonutCancelHoverClear();
+    if (severityDonutState.hoverId === id) return;
     setSeverityDonutHover(id);
     showSeverityDonutTooltip(ev, id);
 }
 
 function severityDonutPointerOut(ev) {
-    var from = severityDonutTarget(ev.target);
-    var to = ev.relatedTarget && severityDonutTarget(ev.relatedTarget);
-    if (from && from === to) return;
-    setSeverityDonutHover(null);
-    hideSeverityDonutTooltip();
+    var related = ev.relatedTarget;
+    if (related) {
+        if (severityDonutHitTarget(related)) return;
+        var legendItem = related.closest && related.closest('.dashboard-severity-legend-item[data-severity]');
+        if (legendItem) return;
+        var hitsRoot = document.getElementById('dashboard-severity-donut-hits');
+        if (hitsRoot && hitsRoot.contains(related)) return;
+    }
+    severityDonutScheduleHoverClear();
 }
 
 function severityDonutClick(ev) {
-    var target = severityDonutTarget(ev.target);
-    if (!target || !target.classList.contains('donut-segment')) return;
+    var target = severityDonutHitTarget(ev.target);
+    if (!target) return;
     var id = target.getAttribute('data-severity');
     if (!id) return;
     ev.preventDefault();
@@ -1737,8 +1863,8 @@ function severityDonutClick(ev) {
 
 function severityDonutKeydown(ev) {
     if (ev.key !== 'Enter' && ev.key !== ' ') return;
-    var target = severityDonutTarget(ev.target);
-    if (!target || !target.classList.contains('donut-segment')) return;
+    var target = severityDonutHitTarget(ev.target);
+    if (!target) return;
     ev.preventDefault();
     var id = target.getAttribute('data-severity');
     if (id) navigateToVulnerabilitiesWithFilter({ severity: id });
@@ -1749,6 +1875,7 @@ function severityLegendPointerOver(ev) {
     if (!item) return;
     var id = item.getAttribute('data-severity');
     if (!id) return;
+    severityDonutCancelHoverClear();
     setSeverityDonutHover(id);
     showSeverityDonutTooltip(ev, id);
 }
@@ -1757,8 +1884,7 @@ function severityLegendPointerOut(ev) {
     var item = ev.target && ev.target.closest && ev.target.closest('.dashboard-severity-legend-item[data-severity]');
     var related = ev.relatedTarget && ev.relatedTarget.closest && ev.relatedTarget.closest('.dashboard-severity-legend-item[data-severity]');
     if (item && item === related) return;
-    setSeverityDonutHover(null);
-    hideSeverityDonutTooltip();
+    severityDonutScheduleHoverClear();
 }
 
 function severityLegendClick(ev) {

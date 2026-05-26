@@ -11,6 +11,129 @@ let _projectsFetchPromise = null;
 
 const PROJECT_ACTIVE_KEY = 'cyberstrike.activeProjectId';
 
+/** 与后端 internal/project/fact_template.go 对齐 */
+const FACT_ATTACK_CHAIN_BODY_TEMPLATE = `## 结论（可验证，一句话）
+<勿仅写「存在漏洞」；写明类型 + 位置 + 触发条件>
+
+## 目标与入口
+- 目标: <URL / IP:Port / 主机名>
+- 入口: <路径 / 接口 / 参数>
+- 前置条件: <匿名 / 角色 / Cookie / 其他依赖>
+
+## 攻击链（逐步可复现）
+1. <侦察/发现>
+2. <利用/触发>
+3. <影响证明（读文件、RCE 回显、越权数据等）>
+
+## Exploit / POC
+### 请求
+\`\`\`http
+<METHOD> <path> HTTP/1.1
+Host: ...
+...
+
+<body>
+\`\`\`
+
+### 响应 / 现象
+<关键响应片段、状态码、差异点>
+
+### 命令 / 脚本（如有）
+\`\`\`bash
+<command>
+\`\`\`
+
+## 关键证据
+- <工具输出摘要 / 截图路径 / 会话或消息 ID>
+
+## 关联
+- related_vulnerability_id: <可选>
+- 依赖事实: <fact_key，如 auth/session_cookie>
+
+## 备注与不确定性
+<待验证假设、环境差异、绕过尝试记录>`;
+
+const FACT_ENV_BODY_TEMPLATE = `## 摘要
+<该事实的核心认知>
+
+## 细节
+<端口/版本/路径/凭据特征/业务规则等>
+
+## 来源与证据
+<命令输出、响应片段、发现时间>
+
+## 关联
+- 相关 fact_key: <可选>`;
+
+const FACT_ATTACK_CHAIN_PREFIXES = ['finding/', 'chain/', 'exploit/', 'poc/'];
+const FACT_ATTACK_CHAIN_CATEGORIES = new Set(['finding', 'chain', 'exploit', 'poc', 'vuln']);
+
+function requiresAttackChainFact(category, factKey) {
+    const c = (category || '').trim().toLowerCase();
+    if (FACT_ATTACK_CHAIN_CATEGORIES.has(c)) return true;
+    const key = (factKey || '').trim().toLowerCase();
+    return FACT_ATTACK_CHAIN_PREFIXES.some((p) => key.startsWith(p));
+}
+
+function isSparseFactBody(category, factKey, body) {
+    if (!requiresAttackChainFact(category, factKey)) return false;
+    const text = (body || '').trim();
+    if (!text) return true;
+    const lower = text.toLowerCase();
+    const hasSteps =
+        lower.includes('攻击链') ||
+        lower.includes('## 攻击') ||
+        lower.includes('## exploit') ||
+        lower.includes('## poc');
+    const hasHTTP =
+        lower.includes('```http') ||
+        lower.includes('```bash') ||
+        lower.includes('curl ') ||
+        lower.includes('get ') ||
+        lower.includes('post ');
+    const hasReq = lower.includes('请求') || lower.includes('响应') || lower.includes('payload');
+    return !(hasSteps || hasHTTP || hasReq);
+}
+
+function formatFactBodyBadge(f) {
+    if (!requiresAttackChainFact(f.category, f.fact_key)) {
+        const hasBody = !!(f.body || '').trim();
+        return `<span class="projects-fact-badge projects-fact-badge--na" title="环境类事实">${hasBody ? '有详情' : '—'}</span>`;
+    }
+    if (isSparseFactBody(f.category, f.fact_key, f.body)) {
+        return '<span class="projects-fact-badge projects-fact-badge--warn" title="缺少攻击链/POC 结构">待补全</span>';
+    }
+    return '<span class="projects-fact-badge projects-fact-badge--ok" title="含可复现结构">可复现</span>';
+}
+
+function updateFactFormHints() {
+    const cat = document.getElementById('fact-modal-category')?.value || '';
+    const key = document.getElementById('fact-modal-key')?.value || '';
+    const body = document.getElementById('fact-modal-body')?.value || '';
+    const hint = document.getElementById('fact-modal-body-hint');
+    if (!hint) return;
+    if (requiresAttackChainFact(cat, key)) {
+        const sparse = isSparseFactBody(cat, key, body);
+        hint.textContent = sparse
+            ? '⚠ 攻击链类事实：请填写完整 body（步骤、HTTP/命令、响应现象），勿仅写结论。可点「插入攻击链模板」。'
+            : '攻击链类：body 将用于审计复现，请保留原始请求/响应与逐步步骤。';
+        hint.classList.toggle('projects-field-hint--warn', sparse);
+    } else {
+        hint.textContent = '环境认知类：body 建议记录来源证据；发现/利用请改用 finding|chain|exploit|poc 分类。';
+        hint.classList.remove('projects-field-hint--warn');
+    }
+}
+
+function insertFactBodyTemplate(kind) {
+    const ta = document.getElementById('fact-modal-body');
+    if (!ta) return;
+    const tpl = kind === 'env' ? FACT_ENV_BODY_TEMPLATE : FACT_ATTACK_CHAIN_BODY_TEMPLATE;
+    if (ta.value.trim() && !confirm('将覆盖当前 body 内容为模板，是否继续？')) return;
+    ta.value = tpl;
+    updateFactFormHints();
+    ta.focus();
+}
+
 function getActiveProjectId() {
     try {
         return localStorage.getItem(PROJECT_ACTIVE_KEY) || '';
@@ -124,6 +247,27 @@ function updateProjectsDetailVisibility() {
 function updateProjectsListCount() {
     const el = document.getElementById('projects-list-count');
     if (el) el.textContent = String(projectsCache.length);
+}
+
+/** 事实分类 → 徽章样式（与 fact_template.go 常量对齐） */
+const FACT_CATEGORY_BADGE = {
+    target: 'projects-category--target',
+    auth: 'projects-category--auth',
+    infra: 'projects-category--infra',
+    business: 'projects-category--business',
+    finding: 'projects-category--finding',
+    chain: 'projects-category--chain',
+    exploit: 'projects-category--exploit',
+    poc: 'projects-category--poc',
+    note: 'projects-category--note',
+    vuln: 'projects-category--exploit',
+};
+
+function formatCategoryBadge(category) {
+    const raw = (category || '').trim();
+    const c = raw.toLowerCase() || 'note';
+    const cls = FACT_CATEGORY_BADGE[c] || 'projects-category--custom';
+    return `<span class="projects-category ${cls}">${escapeHtml(raw || '—')}</span>`;
 }
 
 function formatConfidenceBadge(confidence) {
@@ -268,15 +412,15 @@ function switchProjectTab(tab) {
 async function loadProjectFacts() {
     const tbody = document.getElementById('project-facts-tbody');
     if (!tbody || !currentProjectId) return;
-    tbody.innerHTML = '<tr class="is-empty-row"><td colspan="6">加载中…</td></tr>';
+    tbody.innerHTML = '<tr class="is-empty-row"><td colspan="7">加载中…</td></tr>';
     const res = await apiFetch(`/api/projects/${currentProjectId}/facts?limit=200`);
     if (!res.ok) {
-        tbody.innerHTML = '<tr class="is-empty-row"><td colspan="6">加载失败</td></tr>';
+        tbody.innerHTML = '<tr class="is-empty-row"><td colspan="7">加载失败</td></tr>';
         return;
     }
     const facts = await res.json();
     if (!facts.length) {
-        tbody.innerHTML = '<tr class="is-empty-row"><td colspan="6">暂无事实，点击「添加事实」或由 Agent 自动写入</td></tr>';
+        tbody.innerHTML = '<tr class="is-empty-row"><td colspan="7">暂无事实，点击「添加事实」或由 Agent 自动写入</td></tr>';
         refreshProjectHeaderStats();
         return;
     }
@@ -285,8 +429,9 @@ async function loadProjectFacts() {
         const idEsc = escapeHtml(f.id);
         return `<tr>
             <td><code>${keyEsc}</code></td>
-            <td>${escapeHtml(f.category)}</td>
+            <td>${formatCategoryBadge(f.category)}</td>
             <td class="cell-summary" title="${escapeHtml(f.summary)}">${escapeHtml(f.summary)}</td>
+            <td>${formatFactBodyBadge(f)}</td>
             <td>${formatConfidenceBadge(f.confidence)}</td>
             <td>${formatProjectTime(f.updated_at, f.created_at)}</td>
             <td class="col-actions">${renderProjectFactActions(keyEsc, idEsc)}</td>
@@ -327,10 +472,26 @@ async function viewProjectFactBody(factKey) {
     const f = await res.json();
     _factDetailKey = f.fact_key;
     document.getElementById('fact-detail-title').textContent = `[${f.fact_key}]`;
-    document.getElementById('fact-detail-meta').textContent =
-        `分类: ${f.category} · 置信度: ${f.confidence} · 更新: ${formatProjectTime(f.updated_at, f.created_at)}` +
-        (f.related_vulnerability_id ? ` · 关联漏洞: ${f.related_vulnerability_id}` : '');
+    const metaParts = [
+        `分类: ${f.category}`,
+        `置信度: ${f.confidence}`,
+        `更新: ${formatProjectTime(f.updated_at, f.created_at)}`,
+    ];
+    if (f.related_vulnerability_id) metaParts.push(`关联漏洞: ${f.related_vulnerability_id}`);
+    if (f.source_conversation_id) metaParts.push(`来源对话: ${f.source_conversation_id}`);
+    document.getElementById('fact-detail-meta').textContent = metaParts.join(' · ');
     document.getElementById('fact-detail-body').textContent = f.body || '(无 body)';
+    const warnEl = document.getElementById('fact-detail-sparse-warn');
+    if (warnEl) {
+        if (isSparseFactBody(f.category, f.fact_key, f.body)) {
+            warnEl.hidden = false;
+            warnEl.textContent =
+                '⚠ 该事实属于攻击链/利用类，但 body 缺少可复现结构（攻击链步骤、HTTP/命令、请求响应等）。建议编辑后补全以便审计复现。';
+        } else {
+            warnEl.hidden = true;
+            warnEl.textContent = '';
+        }
+    }
     openProjectsOverlay('fact-detail-modal');
 }
 
@@ -562,6 +723,7 @@ function resetFactModalForm() {
     document.getElementById('fact-modal-confidence').value = 'tentative';
     const rel = document.getElementById('fact-modal-related-vuln');
     if (rel) rel.value = '';
+    updateFactFormHints();
 }
 
 function fillFactModalForm(f) {
@@ -569,7 +731,19 @@ function fillFactModalForm(f) {
     document.getElementById('fact-modal-title').textContent = '编辑事实';
     document.getElementById('fact-modal-submit-btn').textContent = '保存修改';
     document.getElementById('fact-modal-key').value = f.fact_key || '';
-    document.getElementById('fact-modal-category').value = f.category || 'note';
+    const catEl = document.getElementById('fact-modal-category');
+    const cat = (f.category || 'note').trim().toLowerCase();
+    if (catEl) {
+        const known = Array.from(catEl.options).some((o) => o.value === cat);
+        if (known) catEl.value = cat;
+        else {
+            const opt = document.createElement('option');
+            opt.value = f.category;
+            opt.textContent = `${f.category}（自定义）`;
+            catEl.appendChild(opt);
+            catEl.value = f.category;
+        }
+    }
     document.getElementById('fact-modal-summary').value = f.summary || '';
     document.getElementById('fact-modal-body').value = f.body || '';
     const conf = (f.confidence || 'tentative').toLowerCase();
@@ -580,6 +754,7 @@ function fillFactModalForm(f) {
     }
     const rel = document.getElementById('fact-modal-related-vuln');
     if (rel) rel.value = f.related_vulnerability_id || '';
+    updateFactFormHints();
 }
 
 function showAddFactModal() {
@@ -608,12 +783,20 @@ function closeFactModal() {
 async function saveFactModal() {
     const fact_key = document.getElementById('fact-modal-key').value.trim();
     const summary = document.getElementById('fact-modal-summary').value.trim();
+    const category = document.getElementById('fact-modal-category').value.trim() || 'note';
+    const body = document.getElementById('fact-modal-body').value;
     if (!fact_key || !summary) return alert('fact_key 与 summary 必填');
+    if (isSparseFactBody(category, fact_key, body)) {
+        const ok = confirm(
+            '该事实属于攻击链/利用类，但 body 尚未包含可复现结构（步骤、HTTP/命令、请求响应等）。\n仍要保存吗？建议先插入攻击链模板并填写 POC。',
+        );
+        if (!ok) return;
+    }
     const payload = {
         fact_key,
-        category: document.getElementById('fact-modal-category').value.trim() || 'note',
+        category,
         summary,
-        body: document.getElementById('fact-modal-body').value,
+        body,
         confidence: document.getElementById('fact-modal-confidence').value,
         related_vulnerability_id: document.getElementById('fact-modal-related-vuln')?.value?.trim() || '',
     };
@@ -708,17 +891,63 @@ function getChatProjectSelection() {
     return getActiveProjectId();
 }
 
+function isActiveChatProjectId(id) {
+    if (!id) return false;
+    return projectsCache.some((p) => p.id === id && p.status !== 'archived');
+}
+
+/** 用于 UI：无效/已删除/无可用项目时视为未绑定 */
+function resolveChatProjectSelection() {
+    const raw = getChatProjectSelection();
+    if (!raw) return '';
+    if (!_projectsListReady) return raw;
+    return isActiveChatProjectId(raw) ? raw : '';
+}
+
+let _normalizingStaleProject = false;
+
+/** 项目列表加载后，清除 localStorage 或对话上残留的失效项目 ID */
+async function normalizeStaleChatProjectSelection() {
+    if (!_projectsListReady || _normalizingStaleProject) return;
+    const raw = getChatProjectSelection();
+    if (!raw || isActiveChatProjectId(raw)) return;
+
+    _normalizingStaleProject = true;
+    try {
+        if (window.currentConversationId) {
+            window._loadedConversationProjectId = '';
+            try {
+                const res = await apiFetch(
+                    `/api/conversations/${encodeURIComponent(window.currentConversationId)}/project`,
+                    {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ projectId: '' }),
+                    }
+                );
+                if (!res.ok) console.warn('清除失效的项目绑定失败');
+            } catch (e) {
+                console.warn(e);
+            }
+        } else {
+            setActiveProjectId('');
+        }
+    } finally {
+        _normalizingStaleProject = false;
+    }
+}
+
 function updateChatProjectButtonLabel() {
     const textEl = document.getElementById('chat-project-text');
     if (!textEl) return;
-    const id = getChatProjectSelection();
-    textEl.textContent = id ? getProjectName(id) || id : '无项目';
+    const id = resolveChatProjectSelection();
+    textEl.textContent = id && projectNameById[id] ? projectNameById[id] : '无项目';
 }
 
 function renderChatProjectPanelList() {
     const list = document.getElementById('chat-project-list');
     if (!list) return;
-    const selected = getChatProjectSelection();
+    const selected = resolveChatProjectSelection();
     const activeProjects = projectsCache.filter((p) => p.status !== 'archived');
     const items = [{ id: '', name: '无项目', description: '不绑定项目黑板' }, ...activeProjects];
     if (!items.length) {
@@ -839,6 +1068,7 @@ async function refreshChatProjectSelector() {
     if (!document.getElementById('chat-project-btn')) return;
     try {
         await ensureProjectsLoaded();
+        await normalizeStaleChatProjectSelection();
     } catch (e) {
         console.warn(e);
     }
@@ -857,8 +1087,7 @@ async function onChatProjectChange() {
 function initChatProjectSelector() {
     if (window._chatProjectSelectorInited) return;
     window._chatProjectSelectorInited = true;
-    prefetchProjectsForChat();
-    updateChatProjectButtonLabel();
+    refreshChatProjectSelector().catch(() => {});
     document.addEventListener('click', (e) => {
         const panel = document.getElementById('chat-project-panel');
         const wrapper = document.querySelector('.project-selector-wrapper');
@@ -899,6 +1128,8 @@ window.prefetchProjectsForChat = prefetchProjectsForChat;
 window.getActiveProjectId = getActiveProjectId;
 window.getProjectName = getProjectName;
 window.viewProjectFactBody = viewProjectFactBody;
+window.insertFactBodyTemplate = insertFactBodyTemplate;
+window.updateFactFormHints = updateFactFormHints;
 window.deprecateProjectFactByKey = deprecateProjectFactByKey;
 window.openVulnerabilitiesForProject = openVulnerabilitiesForProject;
 window.openVulnerabilityDetail = openVulnerabilityDetail;

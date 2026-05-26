@@ -21755,6 +21755,55 @@ button.chat-files-dropdown-item:hover:not(:disabled) {
     background: #f1f5f9;
     color: #64748b;
 }
+.projects-category {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-transform: lowercase;
+    white-space: nowrap;
+}
+.projects-category--target {
+    background: #dbeafe;
+    color: #1e40af;
+}
+.projects-category--auth {
+    background: #ede9fe;
+    color: #5b21b6;
+}
+.projects-category--infra {
+    background: #e2e8f0;
+    color: #334155;
+}
+.projects-category--business {
+    background: #ccfbf1;
+    color: #0f766e;
+}
+.projects-category--finding {
+    background: #ffedd5;
+    color: #c2410c;
+}
+.projects-category--chain {
+    background: #fed7aa;
+    color: #9a3412;
+}
+.projects-category--exploit {
+    background: #fee2e2;
+    color: #991b1b;
+}
+.projects-category--poc {
+    background: #ffe4e6;
+    color: #be123c;
+}
+.projects-category--note {
+    background: #f1f5f9;
+    color: #64748b;
+}
+.projects-category--custom {
+    background: #e0e7ff;
+    color: #4338ca;
+}
 .projects-severity {
     display: inline-block;
     font-size: 0.6875rem;
@@ -21927,6 +21976,75 @@ body.projects-modal-open {
     border-radius: 10px;
     border: 1px solid #e2e8f0;
     color: #334155;
+}
+.projects-field-hint {
+    margin: 6px 0 0;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: #64748b;
+}
+.projects-field-hint--warn {
+    color: #b45309;
+}
+.projects-form-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+.projects-form-label-row > label {
+    margin-bottom: 0;
+}
+.projects-form-label-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.projects-form-label-actions .btn-link {
+    font-size: 0.75rem;
+    padding: 0;
+    border: none;
+    background: none;
+    color: #2563eb;
+    cursor: pointer;
+    text-decoration: underline;
+}
+.fact-modal-body-input {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+.projects-fact-sparse-warn {
+    margin: 0 0 10px;
+    padding: 10px 12px;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: #92400e;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+}
+.projects-fact-badge {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+.projects-fact-badge--ok {
+    color: #166534;
+    background: #dcfce7;
+}
+.projects-fact-badge--warn {
+    color: #92400e;
+    background: #fef3c7;
+}
+.projects-fact-badge--na {
+    color: #64748b;
+    background: #f1f5f9;
 }
 .vulnerability-filter-field--project select {
     min-width: 120px;

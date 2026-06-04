@@ -809,8 +809,7 @@ func (h *OpenAPIHandler) GetOpenAPISpec(c *gin.Context) {
 						"jpeg_quality":                 map[string]interface{}{"type": "integer", "description": "JPEG 质量 60-100"},
 						"max_payload_bytes":            map[string]interface{}{"type": "integer", "description": "送 API 体积上限（字节）"},
 						"skip_preprocess_below_bytes":  map[string]interface{}{"type": "integer", "description": "低于该字节且尺寸合规时可原图直传；0=始终压缩"},
-						"detail":                       map[string]interface{}{"type": "string", "enum": []string{"low", "high", "auto"}, "description": "OpenAI 兼容 image detail"},
-						"allowed_roots":                map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}, "description": "额外允许读取的绝对路径根"},
+						"detail": map[string]interface{}{"type": "string", "enum": []string{"low", "high", "auto"}, "description": "OpenAI 兼容 image detail"},
 					},
 				},
 				"AnalyzeImageToolCall": map[string]interface{}{
@@ -819,7 +818,7 @@ func (h *OpenAPIHandler) GetOpenAPISpec(c *gin.Context) {
 					"properties": map[string]interface{}{
 						"path": map[string]interface{}{
 							"type":        "string",
-							"description": "图片路径（cwd、chat_uploads、result_storage_dir 或 allowed_roots 下）",
+							"description": "图片绝对路径或相对于进程工作目录的路径",
 						},
 						"question": map[string]interface{}{
 							"type":        "string",

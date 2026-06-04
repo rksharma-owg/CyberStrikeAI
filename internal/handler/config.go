@@ -1548,9 +1548,6 @@ func updateVisionConfig(doc *yaml.Node, cfg config.VisionConfig) {
 	if strings.TrimSpace(cfg.Detail) != "" {
 		setStringInMap(visionNode, "detail", cfg.Detail)
 	}
-	if len(cfg.AllowedRoots) > 0 {
-		setStringSliceInMap(visionNode, "allowed_roots", cfg.AllowedRoots)
-	}
 }
 
 func updateOpenAIConfig(doc *yaml.Node, cfg config.OpenAIConfig) {

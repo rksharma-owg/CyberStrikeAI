@@ -33,11 +33,6 @@ func RegisterAnalyzeImageTool(mcpServer *mcp.Server, cfg *config.Config, logger 
 		return
 	}
 
-	pathOpt := PathOptions{
-		CWD:              cwd,
-		ResultStorageDir: cfg.Agent.ResultStorageDir,
-		ExtraRoots:       cfg.Vision.AllowedRoots,
-	}
 	preOpt := PreprocessOptions{
 		MaxImageBytes:            cfg.Vision.MaxImageBytesEffective(),
 		MaxDimension:             cfg.Vision.MaxDimensionEffective(),
@@ -73,7 +68,7 @@ func RegisterAnalyzeImageTool(mcpServer *mcp.Server, cfg *config.Config, logger 
 		path, _ := args["path"].(string)
 		question, _ := args["question"].(string)
 
-		abs, err := ResolveImagePath(path, pathOpt)
+		abs, err := ResolveImagePath(path, cwd)
 		if err != nil {
 			return textResult(fmt.Sprintf("路径校验失败: %v", err), true), nil
 		}

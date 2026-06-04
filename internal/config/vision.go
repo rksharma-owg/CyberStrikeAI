@@ -15,8 +15,7 @@ type VisionConfig struct {
 	JPEGQuality     int      `yaml:"jpeg_quality,omitempty" json:"jpeg_quality,omitempty"`
 	MaxPayloadBytes          int64 `yaml:"max_payload_bytes,omitempty" json:"max_payload_bytes,omitempty"`
 	SkipPreprocessBelowBytes int64 `yaml:"skip_preprocess_below_bytes,omitempty" json:"skip_preprocess_below_bytes,omitempty"` // 0=始终压缩；默认 2MB 且长边已<=max_dimension 时原图直传
-	Detail                   string   `yaml:"detail,omitempty" json:"detail,omitempty"` // low | high | auto
-	AllowedRoots    []string `yaml:"allowed_roots,omitempty" json:"allowed_roots,omitempty"`
+	Detail string `yaml:"detail,omitempty" json:"detail,omitempty"` // low | high | auto
 }
 
 func (v VisionConfig) TimeoutSecondsEffective() int {

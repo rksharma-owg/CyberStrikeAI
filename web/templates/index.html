@@ -3517,10 +3517,9 @@
         </div>
     </div>
 
-    <!-- Marked.js for Markdown parsing -->
-    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
-    <!-- DOMPurify for HTML sanitization to prevent XSS -->
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
+    <!-- Marked.js + DOMPurify：本地 vendor，避免 CDN 不可用导致 Markdown 降级为纯文本 -->
+    <script src="/static/vendor/marked.min.js"></script>
+    <script src="/static/vendor/purify.min.js"></script>
     <script src="/static/js/sanitize-markdown.js"></script>
     <!-- Cytoscape.js for attack chain visualization -->
     <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.27.0/dist/cytoscape.min.js"></script>

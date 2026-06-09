@@ -68,9 +68,25 @@
         domPurifyHooksInstalled = true;
     }
 
+    /** 明显 Markdown 结构时，不应因零散 HTML 标签误判为整页 HTML */
+    function looksLikeMarkdown(src) {
+        const s = String(src);
+        return /^#{1,6}\s/m.test(s)
+            || /^\s*[-*+]\s/m.test(s)
+            || /^\s*\d+\.\s/m.test(s)
+            || /\*\*[^*\n]+\*\*/.test(s)
+            || /`[^`\n]+`/.test(s)
+            || /^```/m.test(s)
+            || /^\|.+\|/m.test(s)
+            || /^\s*>\s/m.test(s);
+    }
+
     /** 探测工具返回的整页 HTML，不宜当作富文本渲染 */
     function isHeavyRawHtml(src) {
         const s = String(src);
+        if (looksLikeMarkdown(s)) {
+            return false;
+        }
         if (/<!DOCTYPE\s+html/i.test(s) || /<\s*html\b/i.test(s)) {
             return true;
         }
@@ -79,6 +95,10 @@
         }
         const tags = s.match(/<[a-z][^>]*>/gi);
         return tags != null && tags.length >= 8;
+    }
+
+    function escapePlainTextAsHtml(text) {
+        return escapeHtmlLocal(text).replace(/\n/g, '<br>');
     }
 
     function formatHtmlAsEscapedPre(text) {
@@ -115,6 +135,23 @@
      * @param {{ profile?: 'chat'|'timeline' }} [options]
      * @returns {string} 安全 HTML
      */
+    function buildRichHtmlFromSource(src) {
+        const hasHtmlTags = /<[a-z][\s\S]*>/i.test(src);
+        const preferMarkdown = typeof marked !== 'undefined'
+            && (looksLikeMarkdown(src) || !hasHtmlTags);
+
+        if (preferMarkdown) {
+            const parsed = parseMarkdownSrc(src);
+            if (parsed != null) {
+                return parsed;
+            }
+        }
+        if (hasHtmlTags) {
+            return src;
+        }
+        return escapePlainTextAsHtml(src);
+    }
+
     function formatMarkdownToHtml(text, options) {
         const profile = (options && options.profile === 'timeline') ? 'timeline' : 'chat';
         const src = normalizeSource(text);
@@ -124,24 +161,13 @@
         }
 
         if (typeof DOMPurify === 'undefined') {
-            return escapeHtmlLocal(src).replace(/\n/g, '<br>');
+            console.warn('DOMPurify 未加载，Markdown 已降级为纯文本渲染（已转义，防 XSS）');
+            return escapePlainTextAsHtml(src);
         }
 
         installDomPurifyHooks();
         const config = sanitizeConfigForProfile(profile);
-
-        let html;
-        const hasHtmlTags = /<[a-z][\s\S]*>/i.test(src);
-        if (typeof marked !== 'undefined' && !hasHtmlTags) {
-            const parsed = parseMarkdownSrc(src);
-            html = parsed != null ? parsed : escapeHtmlLocal(src).replace(/\n/g, '<br>');
-        } else if (hasHtmlTags) {
-            html = src;
-        } else {
-            html = escapeHtmlLocal(src).replace(/\n/g, '<br>');
-        }
-
-        return DOMPurify.sanitize(html, config);
+        return DOMPurify.sanitize(buildRichHtmlFromSource(src), config);
     }
 
     function sanitizeRichHtml(html, profile) {
@@ -171,6 +197,7 @@
         formatMarkdownToHtml: formatMarkdownToHtml,
         sanitizeRichHtml: sanitizeRichHtml,
         isHeavyRawHtml: isHeavyRawHtml,
+        looksLikeMarkdown: looksLikeMarkdown,
         escapeHtmlLocal: escapeHtmlLocal,
         stripSuspiciousImages: stripSuspiciousImages,
     };

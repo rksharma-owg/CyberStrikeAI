@@ -101,7 +101,40 @@ func sameResponseStreamMeta(a, b map[string]interface{}) bool {
 	}
 	orchA, _ := a["orchestration"].(string)
 	orchB, _ := b["orchestration"].(string)
-	return strings.TrimSpace(orchA) == strings.TrimSpace(orchB)
+	if strings.TrimSpace(orchA) != strings.TrimSpace(orchB) {
+		return false
+	}
+	iterA := responseStreamIterationFromMeta(a)
+	iterB := responseStreamIterationFromMeta(b)
+	if iterA != 0 && iterB != 0 && iterA != iterB {
+		return false
+	}
+	streamA, _ := a["streamId"].(string)
+	streamB, _ := b["streamId"].(string)
+	streamA = strings.TrimSpace(streamA)
+	streamB = strings.TrimSpace(streamB)
+	if streamA != "" && streamB != "" && streamA != streamB {
+		return false
+	}
+	return true
+}
+
+func responseStreamIterationFromMeta(m map[string]interface{}) int {
+	if m == nil {
+		return 0
+	}
+	switch v := m["iteration"].(type) {
+	case int:
+		return v
+	case int32:
+		return int(v)
+	case int64:
+		return int(v)
+	case float64:
+		return int(v)
+	default:
+		return 0
+	}
 }
 
 func discardPlanningIfEchoesToolResult(respPlan *responsePlanAgg, toolData interface{}) {

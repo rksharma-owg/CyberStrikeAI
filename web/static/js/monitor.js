@@ -31,6 +31,25 @@ function shouldSkipTaskEventReplayAttach(conversationId) {
         return false;
     }
 }
+/** 监控页展示：内部 mcp::tool → 模型侧 mcp__tool */
+function formatMonitorToolName(name) {
+    if (!name || typeof name !== 'string') return name || '';
+    return name.includes('::') ? name.replace('::', '__') : name;
+}
+
+/** 筛选/API：mcp__tool → 内部 mcp::tool（与库存一致） */
+function canonicalMonitorToolName(name) {
+    if (!name || typeof name !== 'string') return name || '';
+    if (name.includes('::')) return name;
+    const idx = name.indexOf('__');
+    if (idx > 0) return `${name.slice(0, idx)}::${name.slice(idx + 2)}`;
+    return name;
+}
+
+function monitorToolNamesEqual(a, b) {
+    return canonicalMonitorToolName(a) === canonicalMonitorToolName(b);
+}
+
 if (typeof window !== 'undefined') {
     window.shouldSkipTaskEventReplayAttach = shouldSkipTaskEventReplayAttach;
 }
@@ -3632,9 +3651,10 @@ async function applyMonitorFilters() {
     const statusFilter = document.getElementById('monitor-status-filter');
     const toolFilter = document.getElementById('monitor-tool-filter');
     const status = statusFilter ? statusFilter.value : 'all';
-    const tool = toolFilter ? (toolFilter.value.trim() || 'all') : 'all';
+    const toolRaw = toolFilter ? (toolFilter.value.trim() || 'all') : 'all';
+    const tool = toolRaw === 'all' ? 'all' : canonicalMonitorToolName(toolRaw);
     if (toolFilter) {
-        toolFilter.classList.toggle('is-filter-active', tool !== 'all');
+        toolFilter.classList.toggle('is-filter-active', toolRaw !== 'all');
     }
     // 当筛选条件改变时，从后端重新获取数据
     await refreshMonitorPanelWithFilter(status, tool);
@@ -4041,9 +4061,10 @@ function renderMcpStatsCombinedSection(topTools, totals, activeToolFilter, timel
 
     if (!hasTools && !showTimeline) return '';
 
+    const filterChipLabel = activeToolFilter ? formatMonitorToolName(activeToolFilter) : '';
     const filterChip = activeToolFilter
-        ? `<span class="mcp-stats-filter-chip" title="${escapeHtml(mcpMonitorT('filterByToolTitle', { tool: activeToolFilter }) || activeToolFilter)}">
-            <span class="mcp-stats-filter-chip__label">${escapeHtml(mcpMonitorT('filterActive', { tool: activeToolFilter }) || `已筛选：${activeToolFilter}`)}</span>
+        ? `<span class="mcp-stats-filter-chip" title="${escapeHtml(mcpMonitorT('filterByToolTitle', { tool: filterChipLabel }) || filterChipLabel)}">
+            <span class="mcp-stats-filter-chip__label">${escapeHtml(mcpMonitorT('filterActive', { tool: filterChipLabel }) || `已筛选：${filterChipLabel}`)}</span>
             <button type="button" class="mcp-stats-filter-chip__clear mcp-stats-clear-filter" aria-label="${escapeHtml(mcpMonitorT('clearToolFilter') || '清除工具筛选')}">×</button>
         </span>`
         : '';
@@ -4483,7 +4504,7 @@ function updateMonitorStatsSubtitle(lastFetchedAt, toolCount) {
 function filterMonitorByTool(toolName) {
     const toolFilter = document.getElementById('monitor-tool-filter');
     if (!toolFilter || !toolName) return;
-    toolFilter.value = toolName;
+    toolFilter.value = formatMonitorToolName(toolName);
     toolFilter.classList.add('is-filter-active');
     applyMonitorFilters();
     const execSection = document.querySelector('.monitor-executions');
@@ -4615,7 +4636,8 @@ function renderMcpStatsToolTable(topTools, totals, activeToolFilter = '') {
 
     let rowsHtml = '';
     topTools.forEach((tool, index) => {
-        const name = tool.toolName || unknownToolLabel;
+        const rawName = tool.toolName || unknownToolLabel;
+        const name = formatMonitorToolName(rawName);
         const total = tool.totalCalls || 0;
         const success = tool.successCalls || 0;
         const failed = tool.failedCalls || 0;
@@ -4623,14 +4645,14 @@ function renderMcpStatsToolTable(topTools, totals, activeToolFilter = '') {
         const toolRate = toolRateNum.toFixed(1);
         const sharePct = totals.total > 0 ? ((total / totals.total) * 100).toFixed(1) : '0.0';
         const dotColor = MCP_STATS_DIST_COLORS[index % MCP_STATS_DIST_COLORS.length];
-        const isActive = activeToolFilter && activeToolFilter === name;
+        const isActive = activeToolFilter && monitorToolNamesEqual(activeToolFilter, rawName);
         const rateClass = getMcpToolRateClass(toolRateNum);
         const rankClass = index === 0 ? ' rank-1' : index === 1 ? ' rank-2' : index === 2 ? ' rank-3' : '';
         const rowAria = mcpMonitorT('toolRowAriaLabel', { name, total, rate: toolRate })
             || `${name}，${total} 次调用，成功率 ${toolRate}%`;
         rowsHtml += `
             <tr class="mcp-stats-tool-row${isActive ? ' is-active' : ''}"
-                data-tool-name="${escapeHtml(name)}"
+                data-tool-name="${escapeHtml(rawName)}"
                 tabindex="0"
                 role="button"
                 aria-label="${escapeHtml(rowAria)}"
@@ -4679,14 +4701,15 @@ function renderMcpStatsToolsPanel(topTools, totals, activeToolFilter = '') {
     const distAria = mcpMonitorT('distTitle') || '调用分布';
 
     const stackedHtml = segments.map((s) => {
-        const isActive = !s.isOthers && activeToolFilter && activeToolFilter === s.name;
-        const title = `${s.name} · ${s.pct}% · ${s.calls}`;
+        const isActive = !s.isOthers && activeToolFilter && monitorToolNamesEqual(activeToolFilter, s.name);
+        const displayName = s.isOthers ? s.name : formatMonitorToolName(s.name);
+        const title = `${displayName} · ${s.pct}% · ${s.calls}`;
         if (s.isOthers) {
             return `<span class="mcp-stats-proportion-seg is-others" data-is-others="1" role="presentation"
                 style="flex:${s.pctNum} 1 0;background:${s.color}" title="${escapeHtml(title)}"></span>`;
         }
-        const segAria = mcpMonitorT('distSegmentAria', { name: s.name, pct: s.pct, calls: s.calls })
-            || `${s.name}，占 ${s.pct}%，${s.calls} 次`;
+        const segAria = mcpMonitorT('distSegmentAria', { name: displayName, pct: s.pct, calls: s.calls })
+            || `${displayName}，占 ${s.pct}%，${s.calls} 次`;
         return `<span class="mcp-stats-proportion-seg${isActive ? ' is-active' : ''}"
             data-tool-name="${escapeHtml(s.name)}" data-pct="${s.pct}" data-calls="${s.calls}" data-is-others="0"
             role="button" tabindex="0" aria-label="${escapeHtml(segAria)}"
@@ -4695,7 +4718,8 @@ function renderMcpStatsToolsPanel(topTools, totals, activeToolFilter = '') {
 
     const maxCalls = Math.max(1, ...topTools.map((t) => t.totalCalls || 0));
     const listHtml = topTools.map((tool, index) => {
-        const name = tool.toolName || unknownToolLabel;
+        const rawName = tool.toolName || unknownToolLabel;
+        const name = formatMonitorToolName(rawName);
         const total = tool.totalCalls || 0;
         const success = tool.successCalls || 0;
         const failed = tool.failedCalls || 0;
@@ -4704,7 +4728,7 @@ function renderMcpStatsToolsPanel(topTools, totals, activeToolFilter = '') {
         const sharePct = totals.total > 0 ? ((total / totals.total) * 100).toFixed(1) : '0.0';
         const color = MCP_STATS_DIST_COLORS[index % MCP_STATS_DIST_COLORS.length];
         const barPct = maxCalls > 0 ? ((total / maxCalls) * 100).toFixed(1) : '0';
-        const isActive = activeToolFilter && activeToolFilter === name;
+        const isActive = activeToolFilter && monitorToolNamesEqual(activeToolFilter, rawName);
         const rateClass = getMcpToolRateClass(toolRateNum);
         const rankClass = index === 0 ? ' rank-1' : index === 1 ? ' rank-2' : index === 2 ? ' rank-3' : '';
         const rowAria = mcpMonitorT('toolRowAriaLabel', { name, total, rate: toolRate })
@@ -4713,7 +4737,7 @@ function renderMcpStatsToolsPanel(topTools, totals, activeToolFilter = '') {
             ? `<span class="mcp-stats-tool-item__fail">${escapeHtml(mcpMonitorT('failedCount', { n: failed }) || `失败 ${failed}`)}</span>`
             : '';
         return `<li class="mcp-stats-tool-item${isActive ? ' is-active' : ''}"
-            data-tool-name="${escapeHtml(name)}" tabindex="0" role="button"
+            data-tool-name="${escapeHtml(rawName)}" tabindex="0" role="button"
             aria-label="${escapeHtml(rowAria)}" aria-pressed="${isActive ? 'true' : 'false'}">
             <span class="mcp-stats-tool-item__rank mcp-stats-rank${rankClass}">${index + 1}</span>
             <span class="mcp-stats-tool-item__dot" style="background:${color}" aria-hidden="true"></span>
@@ -4947,7 +4971,7 @@ function renderMonitorExecutions(executions = [], statusFilter = 'all') {
             const statusLabel = (typeof window.t === 'function' && statusKey) ? window.t('mcpMonitor.' + statusKey) : getStatusText(status);
             const startTime = exec.startTime ? (new Date(exec.startTime).toLocaleString ? new Date(exec.startTime).toLocaleString(locale || 'en-US') : String(exec.startTime)) : unknownLabel;
             const duration = formatExecutionDuration(exec.startTime, exec.endTime);
-            const toolName = escapeHtml(exec.toolName || unknownToolLabel);
+            const toolName = escapeHtml(formatMonitorToolName(exec.toolName) || unknownToolLabel);
             const rawExecId = exec.id || '';
             const executionId = escapeHtml(rawExecId);
             const terminateBtn = status === 'running'

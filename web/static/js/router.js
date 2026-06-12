@@ -315,6 +315,9 @@ function showSubmenuPopup(navItem, menuId) {
 async function initPage(pageId) {
     // 等待 i18n 就绪，避免快速刷新时翻译函数未初始化导致页面显示原始占位符 key
     if (window.i18nReady) await window.i18nReady;
+    if (typeof stopExternalMcpPoll === 'function') {
+        stopExternalMcpPoll();
+    }
     switch(pageId) {
         case 'dashboard':
             if (typeof refreshDashboard === 'function') {
@@ -372,21 +375,26 @@ async function initPage(pageId) {
                     }, 100);
                 }
             };
-            // 先拉取全局配置，确保 tool_search 常驻状态按后端生效集合展示
+            const afterMcpConfigReady = () => {
+                startLoadMcpTools();
+                if (typeof loadExternalMCPs === 'function') {
+                    loadExternalMCPs().catch(err => {
+                        console.warn('加载外部MCP列表失败:', err);
+                    });
+                }
+                if (typeof startExternalMcpPoll === 'function') {
+                    startExternalMcpPoll();
+                }
+            };
+            // 先拉取配置（含 tool_search 常驻列表），再加载工具与外部 MCP
             if (typeof loadConfig === 'function') {
                 loadConfig(false)
                     .catch(err => {
-                        console.warn('加载配置失败（将继续加载工具列表）:', err);
+                        console.warn('加载配置失败（将继续加载 MCP 列表）:', err);
                     })
-                    .finally(startLoadMcpTools);
+                    .finally(afterMcpConfigReady);
             } else {
-                startLoadMcpTools();
-            }
-            // 先加载外部MCP列表（快速），然后加载工具列表
-            if (typeof loadExternalMCPs === 'function') {
-                loadExternalMCPs().catch(err => {
-                    console.warn('加载外部MCP列表失败:', err);
-                });
+                afterMcpConfigReady();
             }
             break;
         case 'projects':

@@ -16,6 +16,96 @@ function getToolKey(tool) {
     }
     return tool.name;
 }
+
+// 常驻工具配置存储键（外部工具用 mcp::tool，与后端 tool_search 白名单一致）
+function getAlwaysVisibleStorageKey(tool) {
+    return getToolKey(tool);
+}
+
+function addAlwaysVisibleAliases(name) {
+    const n = (name || '').trim();
+    if (!n) return;
+    alwaysVisibleToolNames.add(n);
+    if (n.includes('::')) {
+        const sep = n.indexOf('::');
+        const mcp = n.slice(0, sep);
+        const tool = n.slice(sep + 2);
+        if (mcp && tool) {
+            alwaysVisibleToolNames.add(`${mcp}__${tool}`);
+        }
+        return;
+    }
+    if (n.includes('__')) {
+        const sep = n.lastIndexOf('__');
+        const mcp = n.slice(0, sep);
+        const tool = n.slice(sep + 2);
+        if (mcp && tool) {
+            alwaysVisibleToolNames.add(`${mcp}::${tool}`);
+        }
+    }
+}
+
+function removeAlwaysVisibleAliases(name) {
+    const n = (name || '').trim();
+    if (!n) return;
+    alwaysVisibleToolNames.delete(n);
+    if (n.includes('::')) {
+        const sep = n.indexOf('::');
+        const mcp = n.slice(0, sep);
+        const tool = n.slice(sep + 2);
+        if (mcp && tool) {
+            alwaysVisibleToolNames.delete(`${mcp}__${tool}`);
+        }
+        return;
+    }
+    if (n.includes('__')) {
+        const sep = n.lastIndexOf('__');
+        const mcp = n.slice(0, sep);
+        const tool = n.slice(sep + 2);
+        if (mcp && tool) {
+            alwaysVisibleToolNames.delete(`${mcp}::${tool}`);
+        }
+    }
+}
+
+function isToolAlwaysVisible(tool) {
+    const key = getAlwaysVisibleStorageKey(tool);
+    if (alwaysVisibleToolNames.has(key)) return true;
+    if (alwaysVisibleToolNames.has(tool.name)) return true;
+    if (tool.is_external && tool.external_mcp) {
+        if (alwaysVisibleToolNames.has(`${tool.external_mcp}__${tool.name}`)) return true;
+    }
+    return false;
+}
+
+function isToolAlwaysVisibleBuiltin(tool) {
+    if (alwaysVisibleBuiltinToolNames.has(tool.name)) return true;
+    return alwaysVisibleBuiltinToolNames.has(getAlwaysVisibleStorageKey(tool));
+}
+
+function getAlwaysVisibleForSave() {
+    const out = new Set();
+    for (const name of alwaysVisibleToolNames) {
+        if (alwaysVisibleBuiltinToolNames.has(name)) continue;
+        if (name.includes('::')) {
+            out.add(name);
+            continue;
+        }
+        if (name.includes('__')) {
+            const sep = name.lastIndexOf('__');
+            const mcp = name.slice(0, sep);
+            const tool = name.slice(sep + 2);
+            if (mcp && tool) out.add(`${mcp}::${tool}`);
+            continue;
+        }
+        out.add(name);
+    }
+    return Array.from(out);
+}
+
+function countUserAlwaysVisibleTools() {
+    return getAlwaysVisibleForSave().length;
+}
 // 从localStorage读取每页显示数量，默认为20
 const getToolsPageSize = () => {
     const saved = localStorage.getItem('toolsPageSize');
@@ -158,14 +248,21 @@ async function loadConfig(loadTools = true) {
         }
         
         currentConfig = await response.json();
-        const alwaysVisibleList = currentConfig?.multi_agent?.tool_search_always_visible_effective_tools;
         const alwaysVisibleConfigured = currentConfig?.multi_agent?.tool_search_always_visible_tools;
-        alwaysVisibleToolNames = new Set(Array.isArray(alwaysVisibleList) ? alwaysVisibleList.filter(Boolean) : []);
-        alwaysVisibleBuiltinToolNames = new Set(
-            alwaysVisibleToolNames.size > 0 && Array.isArray(alwaysVisibleConfigured)
-                ? Array.from(alwaysVisibleToolNames).filter(name => !alwaysVisibleConfigured.includes(name))
-                : []
-        );
+        const alwaysVisibleEffective = currentConfig?.multi_agent?.tool_search_always_visible_effective_tools;
+        alwaysVisibleToolNames = new Set();
+        if (Array.isArray(alwaysVisibleConfigured)) {
+            alwaysVisibleConfigured.filter(Boolean).forEach(addAlwaysVisibleAliases);
+        }
+        alwaysVisibleBuiltinToolNames = new Set();
+        if (Array.isArray(alwaysVisibleEffective)) {
+            const configuredSet = new Set(Array.isArray(alwaysVisibleConfigured) ? alwaysVisibleConfigured : []);
+            alwaysVisibleEffective.filter(Boolean).forEach(name => {
+                if (!configuredSet.has(name)) {
+                    alwaysVisibleBuiltinToolNames.add(name);
+                }
+            });
+        }
         
         // 填充OpenAI配置
         const providerEl = document.getElementById('openai-provider');
@@ -634,8 +731,8 @@ function renderToolsList() {
             is_external: tool.is_external || false,
             external_mcp: tool.external_mcp || ''
         };
-        const alwaysVisibleChecked = alwaysVisibleToolNames.has(tool.name);
-        const alwaysVisibleLocked = alwaysVisibleBuiltinToolNames.has(tool.name);
+        const alwaysVisibleChecked = isToolAlwaysVisible(tool);
+        const alwaysVisibleLocked = isToolAlwaysVisibleBuiltin(tool);
         
         // 外部工具标签，显示来源信息（可点击跳转到对应 MCP 卡片）
         let externalBadge = '';
@@ -660,7 +757,7 @@ function renderToolsList() {
                     ${escapeHtml(tool.name)}
                     ${externalBadge}
                     <label class="tool-resident-toggle" title="${typeof window.t === 'function' ? window.t('mcp.alwaysVisibleHint') : '始终常驻在 Tool Search 可见列表'}" onclick="event.stopPropagation()">
-                        <input type="checkbox" ${alwaysVisibleChecked ? 'checked' : ''} ${alwaysVisibleLocked ? 'disabled' : ''} onchange="handleToolAlwaysVisibleChange('${escapeHtml(tool.name)}', this.checked)" />
+                        <input type="checkbox" ${alwaysVisibleChecked ? 'checked' : ''} ${alwaysVisibleLocked ? 'disabled' : ''} onchange="handleToolAlwaysVisibleChange('${escapeHtml(toolKey)}', this.checked)" />
                         <span>${typeof window.t === 'function' ? window.t('mcp.alwaysVisibleLabel') : '常驻'}</span>
                     </label>
                     ${alwaysVisibleLocked ? `<span class="external-tool-badge" title="${typeof window.t === 'function' ? window.t('mcp.alwaysVisibleBuiltinHint') : '后端内置工具默认常驻，不可关闭'}">${typeof window.t === 'function' ? window.t('mcp.alwaysVisibleBuiltinLabel') : '内置默认'}</span>` : ''}
@@ -946,14 +1043,15 @@ function handleToolCheckboxChange(toolKey, enabled) {
     updateToolsStats();
 }
 
-function handleToolAlwaysVisibleChange(toolName, alwaysVisible) {
-    const name = (toolName || '').trim();
-    if (!name) return;
+function handleToolAlwaysVisibleChange(toolKey, alwaysVisible) {
+    const key = (toolKey || '').trim();
+    if (!key) return;
     if (alwaysVisible) {
-        alwaysVisibleToolNames.add(name);
+        addAlwaysVisibleAliases(key);
     } else {
-        alwaysVisibleToolNames.delete(name);
+        removeAlwaysVisibleAliases(key);
     }
+    updateToolsStats();
 }
 
 // 全选工具
@@ -1088,7 +1186,7 @@ async function updateToolsStats() {
     }
     
     const tStats = typeof window.t === 'function' ? window.t : (k) => k;
-    const pinnedCount = alwaysVisibleToolNames.size;
+    const pinnedCount = countUserAlwaysVisibleTools();
     statsEl.innerHTML = `
         <span title="${tStats('mcp.currentPageEnabled')}">✅ ${tStats('mcp.currentPageEnabled')}: <strong>${currentPageEnabled}</strong> / ${currentPageTotal}</span>
         <span title="${tStats('mcp.totalEnabled')}">📊 ${tStats('mcp.totalEnabled')}: <strong>${totalEnabled}</strong> / ${totalTools}</span>
@@ -1596,7 +1694,7 @@ async function saveToolsConfig() {
                 robot_default_agent_mode: currentConfig?.multi_agent?.robot_default_agent_mode || 'eino_single',
                 batch_use_multi_agent: currentConfig?.multi_agent?.batch_use_multi_agent === true,
                 plan_execute_loop_max_iterations: Number(currentConfig?.multi_agent?.plan_execute_loop_max_iterations || 0),
-                tool_search_always_visible_tools: Array.from(alwaysVisibleToolNames).filter(name => !alwaysVisibleBuiltinToolNames.has(name))
+                tool_search_always_visible_tools: getAlwaysVisibleForSave()
             },
             tools: []
         };
@@ -1793,6 +1891,32 @@ async function fetchExternalMCPs() {
     return response.json();
 }
 
+// MCP 管理页定时刷新外部 MCP 状态（感知后台断连/自动重连）
+let externalMcpPollTimer = null;
+const EXTERNAL_MCP_POLL_INTERVAL_MS = 8000;
+
+function startExternalMcpPoll() {
+    stopExternalMcpPoll();
+    externalMcpPollTimer = setInterval(function () {
+        const mcpPage = document.getElementById('page-mcp-management');
+        if (!mcpPage || !mcpPage.classList.contains('active')) {
+            stopExternalMcpPoll();
+            return;
+        }
+        if (document.hidden) {
+            return;
+        }
+        loadExternalMCPs().catch(function () { /* ignore */ });
+    }, EXTERNAL_MCP_POLL_INTERVAL_MS);
+}
+
+function stopExternalMcpPoll() {
+    if (externalMcpPollTimer) {
+        clearInterval(externalMcpPollTimer);
+        externalMcpPollTimer = null;
+    }
+}
+
 // 加载外部MCP列表并渲染
 async function loadExternalMCPs() {
     try {
@@ -1898,9 +2022,9 @@ function renderExternalMCPList(servers) {
                         <button class="btn-small btn-danger" onclick="deleteExternalMCP('${escapeHtml(name)}')" title="${statusT('mcp.deleteConfig')}" ${status === 'connecting' ? 'disabled' : ''}>🗑 ${statusT('common.delete')}</button>
                     </div>
                 </div>
-                ${status === 'error' && server.error ? `
-                <div class="external-mcp-error" style="margin: 12px 0; padding: 12px; background: #fee; border-left: 3px solid #f44; border-radius: 4px; color: #c33; font-size: 0.875rem;">
-                    <strong>❌ ${statusT('mcp.connectionErrorLabel')}</strong>${escapeHtml(server.error)}
+                ${(status === 'error' || status === 'disconnected') && server.error ? `
+                <div class="external-mcp-error" style="margin: 12px 0; padding: 12px; background: ${status === 'error' ? '#fee' : '#fff8e6'}; border-left: 3px solid ${status === 'error' ? '#f44' : '#e6a700'}; border-radius: 4px; color: ${status === 'error' ? '#c33' : '#8a6d00'}; font-size: 0.875rem;">
+                    <strong>${status === 'error' ? '❌' : '⚠️'} ${statusT('mcp.connectionErrorLabel')}</strong>${escapeHtml(server.error)}
                 </div>` : ''}
                 <div class="external-mcp-item-details">
                     <div>

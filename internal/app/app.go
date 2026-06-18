@@ -1108,6 +1108,7 @@ func setupRoutes(
 		c2Routes.POST("/listeners/:id/start", c2Handler.StartListener)
 		c2Routes.POST("/listeners/:id/stop", c2Handler.StopListener)
 		c2Routes.GET("/sessions", c2Handler.ListSessions)
+		c2Routes.DELETE("/sessions", c2Handler.DeleteSessions)
 		c2Routes.GET("/sessions/:id", c2Handler.GetSession)
 		c2Routes.DELETE("/sessions/:id", c2Handler.DeleteSession)
 		c2Routes.PUT("/sessions/:id/sleep", c2Handler.SetSessionSleep)

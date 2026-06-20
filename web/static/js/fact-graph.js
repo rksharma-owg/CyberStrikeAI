@@ -45,12 +45,20 @@
                 return { typeLabel: '目标', typeEn: 'TARGET', accent: '#4F46E5', bgEnd: '#F5F3FF', icon: 'target' };
             case 'finding':
                 return { typeLabel: '发现', typeEn: 'FINDING', accent: '#E11D48', bgEnd: '#FFF1F2', icon: 'vulnerability' };
+            case 'exploit':
+                return { typeLabel: '利用', typeEn: 'EXPLOIT', accent: '#B45309', bgEnd: '#FFFBEB', icon: 'vulnerability' };
             case 'vulnerability':
                 return { typeLabel: '漏洞', typeEn: 'VULN', accent: '#BE123C', bgEnd: '#FFF1F2', icon: 'vulnerability' };
             case 'auth':
                 return { typeLabel: '认证', typeEn: 'AUTH', accent: '#0D9488', bgEnd: '#F0FDFA', icon: 'default' };
             case 'infra':
                 return { typeLabel: '基础设施', typeEn: 'INFRA', accent: '#64748B', bgEnd: '#F8FAFC', icon: 'default' };
+            case 'chain':
+                return { typeLabel: '攻击链', typeEn: 'CHAIN', accent: '#7C3AED', bgEnd: '#F5F3FF', icon: 'vulnerability' };
+            case 'poc':
+                return { typeLabel: 'POC', typeEn: 'POC', accent: '#C2410C', bgEnd: '#FFEDD5', icon: 'vulnerability' };
+            case 'business':
+                return { typeLabel: '业务', typeEn: 'BUSINESS', accent: '#0369A1', bgEnd: '#F0F9FF', icon: 'default' };
             case 'missing':
                 return { typeLabel: '缺失', typeEn: 'MISSING', accent: '#CBD5E1', bgEnd: '#F1F5F9', icon: 'default' };
             default:
@@ -261,6 +269,24 @@
         }
     }
 
+    // ELK 分层（仅影响节点纵向位置，不修改边的 source/target）
+    function pathGraphNodeLayer(type, factKey) {
+        const key = (factKey || '').toLowerCase();
+        if (key.startsWith('vuln:')) return '4';
+        if (key.startsWith('target/')) return '0';
+        if (key.startsWith('infra/') || key.startsWith('auth/') || key.startsWith('business/')) return '1';
+        if (key.startsWith('exploit/') || key.startsWith('evidence/')) return '3';
+        if (key.startsWith('poc/')) return '3';
+        if (key.startsWith('chain/')) return '2';
+        if (key.startsWith('finding/')) return '2';
+        const t = (type || '').toLowerCase();
+        if (t === 'target') return '0';
+        if (t === 'infra' || t === 'auth') return '1';
+        if (t === 'exploit' || t === 'poc') return '3';
+        if (t === 'chain' || t === 'finding' || t === 'vulnerability') return '2';
+        return '2';
+    }
+
     function applyElkLayout(validEdges, isComplex) {
         const layoutOptions = {
             name: 'breadthfirst',
@@ -290,7 +316,15 @@
                 const n = _cy ? _cy.getElementById(node.id) : null;
                 const w = n.length ? n.data('nodeWidth') : node.type === 'target' ? CARD_TARGET_W : CARD_MIN_W;
                 const h = n.length ? n.data('nodeHeight') : CARD_MIN_H;
-                return { id: node.id, width: w, height: h };
+                const nodeKey = node.fact_key || node.id;
+                return {
+                    id: node.id,
+                    width: w,
+                    height: h,
+                    layoutOptions: {
+                        'org.eclipse.elk.layered.layering.layerId': pathGraphNodeLayer(node.type, nodeKey),
+                    },
+                };
             }),
             edges: validEdges.map((edge) => ({
                 id: edge.id,
@@ -543,6 +577,23 @@
         }
     }
 
+    /** 与后端 GraphNodeType 一致：优先 fact_key 前缀，再 category/type。 */
+    function resolveGraphNodeType(node) {
+        if (!node) return 'note';
+        const key = String(node.fact_key || node.id || '').toLowerCase();
+        if (key.startsWith('target/')) return 'target';
+        if (key.startsWith('exploit/') || key.startsWith('poc/') || key.startsWith('evidence/')) return 'exploit';
+        if (key.startsWith('chain/')) return 'chain';
+        if (key.startsWith('finding/')) return 'finding';
+        if (key.startsWith('auth/')) return 'auth';
+        if (key.startsWith('infra/')) return 'infra';
+        if (key.startsWith('business/')) return 'business';
+        if (key.startsWith('vuln:')) return 'vulnerability';
+        const t = String(node.type || node.category || 'note').toLowerCase();
+        if (t === 'vuln') return 'vulnerability';
+        return t || 'note';
+    }
+
     global.ProjectFactGraph = {
         render,
         destroy,
@@ -551,5 +602,7 @@
         setConnectMode,
         selectEdge,
         clearEdgeSelection,
+        nodeTheme,
+        resolveGraphNodeType,
     };
 })(typeof window !== 'undefined' ? window : globalThis);

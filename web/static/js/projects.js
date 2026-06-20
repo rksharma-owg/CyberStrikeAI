@@ -64,7 +64,7 @@ Host: ...
 ## 关联
 - related_vulnerability_id: <可选>
 - 依赖事实: <fact_key，如 auth/session_cookie>
-- 结构化出边（自动同步）:
+  - 结构化关系边（自动同步；links 文本格式 type: source_fact_key）:
   - discovered_on: target/primary_domain
 
 ## 备注与不确定性
@@ -798,12 +798,13 @@ async function handleGraphConnectNodePick(factKey) {
     loadProjectFacts();
 }
 
-function formatOutgoingLinksForModal(links) {
+function formatIncomingLinksForModal(links) {
     if (!links || !links.length) return '';
     return links
-        .map((e) => `${e.edge_type || e.type}: ${e.target_fact_key || e.to}`)
+        .map((e) => `${e.edge_type || e.type}: ${e.source_fact_key || e.from}`)
         .join('\n');
 }
+
 
 async function loadProjectFactGraph() {
     const container = document.getElementById('project-fact-graph-container');
@@ -887,9 +888,9 @@ function renderGraphEdgesListHtml(factKey, graphData, selectedEdgeId) {
     return edges
         .map((e) => {
             const isOut = e.source === factKey;
-            const dirLabel = isOut ? tp('projects.graphEdgeOutgoing') : tp('projects.graphEdgeIncoming');
-            const other = isOut ? e.target : e.source;
-            const arrow = isOut ? '→' : '←';
+            const dirLabel = isOut ? tp('projects.graphEdgeFromSelf') : tp('projects.graphEdgeToSelf');
+            const src = e.source || '';
+            const tgt = e.target || '';
             const selected = e.id === selectedEdgeId ? ' is-selected' : '';
             const synthetic = isSyntheticGraphEdge(e);
             const deleteBtn = synthetic
@@ -898,8 +899,7 @@ function renderGraphEdgesListHtml(factKey, graphData, selectedEdgeId) {
             return `<div class="project-fact-graph-edge-item${selected}" data-edge-id="${escapeHtml(e.id)}" onclick="focusProjectFactGraphEdge(${JSON.stringify(e.id)})">
                 <span class="project-fact-graph-edge-dir">${escapeHtml(dirLabel)}</span>
                 <span class="project-fact-graph-edge-type">${escapeHtml(e.type || '')}</span>
-                <span class="project-fact-graph-edge-arrow">${arrow}</span>
-                <span class="project-fact-graph-edge-peer" title="${escapeHtml(other)}">${escapeHtml(other)}</span>
+                <span class="project-fact-graph-edge-peer" title="${escapeHtml(src + ' → ' + tgt)}">${escapeHtml(src)} → ${escapeHtml(tgt)}</span>
                 ${deleteBtn}
             </div>`;
         })
@@ -935,17 +935,25 @@ function showProjectFactGraphNode(factKey, graphData, selectedEdgeId) {
     if (!sidebar || !titleEl || !metaEl) return;
     titleEl.textContent = factKey;
     if (categoryEl) {
-        const cat = node?.category || node?.type || '';
-        categoryEl.textContent = cat;
-        categoryEl.hidden = !cat;
-        categoryEl.className = 'project-fact-graph-node-category project-fact-graph-node-category--' + (cat || 'note');
+        const visualType =
+            typeof ProjectFactGraph !== 'undefined' && ProjectFactGraph.resolveGraphNodeType
+                ? ProjectFactGraph.resolveGraphNodeType(node)
+                : node?.type || node?.category || 'note';
+        const theme =
+            typeof ProjectFactGraph !== 'undefined' && ProjectFactGraph.nodeTheme
+                ? ProjectFactGraph.nodeTheme(visualType)
+                : { typeEn: String(visualType).toUpperCase(), typeLabel: visualType };
+        categoryEl.textContent = theme.typeEn || String(visualType).toUpperCase();
+        categoryEl.hidden = false;
+        categoryEl.className = 'project-fact-graph-node-category project-fact-graph-node-category--' + visualType;
+        categoryEl.title = theme.typeLabel || visualType;
     }
     const conf = node?.confidence || '';
-    const label = node?.label || '';
-    if (label || conf) {
+    const summary = (node?.summary || node?.label || '').trim();
+    if (summary || conf) {
         const parts = [];
-        if (label) {
-            parts.push(`<span class="project-fact-graph-node-summary">${escapeHtml(label)}</span>`);
+        if (summary) {
+            parts.push(`<span class="project-fact-graph-node-summary">${escapeHtml(summary)}</span>`);
         }
         if (conf) {
             parts.push(formatConfidenceBadge(conf));
@@ -1806,6 +1814,8 @@ function resetFactModalForm() {
     if (rel) rel.value = '';
     const linksEl = document.getElementById('fact-modal-links');
     if (linksEl) linksEl.value = '';
+    const incomingWrap = document.getElementById('fact-modal-incoming-links-wrap');
+    if (incomingWrap) incomingWrap.hidden = true;
     updateFactFormHints();
 }
 
@@ -1838,7 +1848,7 @@ function fillFactModalForm(f) {
     const rel = document.getElementById('fact-modal-related-vuln');
     if (rel) rel.value = f.related_vulnerability_id || '';
     const linksEl = document.getElementById('fact-modal-links');
-    if (linksEl) linksEl.value = formatOutgoingLinksForModal(f.outgoing_links);
+    if (linksEl) linksEl.value = formatIncomingLinksForModal(f.incoming_links);
     const pinEl = document.getElementById('fact-modal-pinned');
     if (pinEl) pinEl.checked = !!f.pinned;
     updateFactFormHints();

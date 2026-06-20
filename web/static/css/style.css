@@ -24545,6 +24545,9 @@ button.chat-files-dropdown-item:hover:not(:disabled) {
     flex: 1 1 auto;
     min-height: 0;
 }
+#project-panel-graph .project-fact-graph-footer {
+    flex: 0 0 auto;
+}
 .projects-graph-toolbar-row {
     align-items: flex-end;
 }
@@ -24603,8 +24606,8 @@ button.chat-files-dropdown-item:hover:not(:disabled) {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px 14px;
-    padding-top: 2px;
+    justify-content: flex-end;
+    gap: 6px 12px;
 }
 .projects-graph-legend-item {
     display: inline-flex;
@@ -24778,10 +24781,16 @@ button.chat-files-dropdown-item:hover:not(:disabled) {
     border: 1px solid #e2e8f0;
 }
 .project-fact-graph-node-category--target { color: #4338ca; background: #eef2ff; border-color: #c7d2fe; }
-.project-fact-graph-node-category--finding { color: #be123c; background: #fff1f2; border-color: #fecdd3; }
+.project-fact-graph-node-category--finding,
+.project-fact-graph-node-category--vulnerability { color: #be123c; background: #fff1f2; border-color: #fecdd3; }
 .project-fact-graph-node-category--exploit,
 .project-fact-graph-node-category--poc { color: #c2410c; background: #ffedd5; border-color: #fdba74; }
+.project-fact-graph-node-category--chain { color: #6d28d9; background: #f5f3ff; border-color: #ddd6fe; }
 .project-fact-graph-node-category--auth { color: #0f766e; background: #f0fdfa; border-color: #99f6e4; }
+.project-fact-graph-node-category--infra { color: #475569; background: #f1f5f9; border-color: #cbd5e1; }
+.project-fact-graph-node-category--business { color: #0369a1; background: #f0f9ff; border-color: #bae6fd; }
+.project-fact-graph-node-category--note { color: #64748b; background: #f8fafc; border-color: #e2e8f0; }
+.project-fact-graph-node-category--missing { color: #94a3b8; background: #f1f5f9; border-color: #e2e8f0; font-style: italic; }
 .project-fact-graph-sidebar-close {
     flex-shrink: 0;
     display: inline-flex;
@@ -24861,7 +24870,7 @@ button.chat-files-dropdown-item:hover:not(:disabled) {
 }
 .project-fact-graph-edge-item {
     display: grid;
-    grid-template-columns: auto auto auto 1fr auto;
+    grid-template-columns: auto auto 1fr auto;
     align-items: center;
     gap: 4px 6px;
     padding: 6px 8px;
@@ -24931,6 +24940,42 @@ button.chat-files-dropdown-item:hover:not(:disabled) {
     color: #cbd5e1;
     flex-shrink: 0;
 }
+.projects-incoming-links-readonly {
+    margin-top: 4px;
+}
+.projects-incoming-links-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.projects-incoming-links-item {
+    padding: 8px 10px;
+    font-size: 0.8125rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #334155;
+    word-break: break-all;
+}
+.projects-incoming-links-item code {
+    font-size: 0.75rem;
+}
+.projects-incoming-links-empty {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: #94a3b8;
+}
+.projects-edge-type {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.75rem;
+    color: #4338ca;
+}
+.projects-edge-arrow {
+    color: #94a3b8;
+}
 .project-fact-graph-sidebar-actions {
     display: flex;
     gap: 8px;
@@ -24938,13 +24983,22 @@ button.chat-files-dropdown-item:hover:not(:disabled) {
     padding-top: 4px;
     border-top: 1px solid #f1f5f9;
 }
+.project-fact-graph-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+    margin: 10px 0 0;
+    flex: 0 0 auto;
+}
 .project-fact-graph-stats {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
-    margin: 12px 0 0;
-    flex: 0 0 auto;
+    margin: 0;
+    flex: 0 1 auto;
 }
 .projects-graph-stat-badge {
     display: inline-flex;

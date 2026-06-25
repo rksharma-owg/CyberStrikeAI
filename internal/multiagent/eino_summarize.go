@@ -150,6 +150,7 @@ func newEinoSummarizationMiddleware(
 			}
 			if appCfg != nil {
 				out = refreshFactIndexInMessages(out, db, projectID, appCfg.Project, logger)
+				out = refreshUserVerbatimAnchorInMessages(out, db, conversationID, appCfg.MultiAgent.UserVerbatimAnchorMaxRunesEffective(), logger)
 			}
 			return out, nil
 		},
@@ -411,6 +412,36 @@ func writeSummarizationTranscript(path string, msgs []adk.Message) error {
 		return fmt.Errorf("write transcript: %w", err)
 	}
 	return nil
+}
+
+// refreshUserVerbatimAnchorInMessages 压缩后从 messages 表刷新 system 中的用户原文锚点。
+func refreshUserVerbatimAnchorInMessages(msgs []adk.Message, db *database.DB, conversationID string, maxRunes int, logger *zap.Logger) []adk.Message {
+	if maxRunes < 0 || db == nil {
+		return msgs
+	}
+	conversationID = strings.TrimSpace(conversationID)
+	if conversationID == "" {
+		return msgs
+	}
+	rows, err := db.GetMessages(conversationID)
+	if err != nil {
+		if logger != nil {
+			logger.Warn("summarization: 刷新用户原文锚点失败",
+				zap.String("conversationId", conversationID),
+				zap.Error(err),
+			)
+		}
+		return msgs
+	}
+	block := project.BuildUserVerbatimAnchorBlockFromMessages(rows, maxRunes)
+	if block == "" {
+		return msgs
+	}
+	out := project.RefreshUserVerbatimAnchorInMessages(msgs, block)
+	if logger != nil {
+		logger.Info("summarization: 已刷新用户原文锚点", zap.String("conversationId", conversationID))
+	}
+	return out
 }
 
 func einoSummarizationTokenCounter(openAIModel string) summarization.TokenCounterFunc {

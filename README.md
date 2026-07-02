@@ -671,6 +671,7 @@ enabled: true
 - [Detection rule authoring](docs/detection-rules.md): Portable rule structure, validation workflow, review checklist, and sanitized example.
 - [Threat hunting workflow](docs/threat-hunting.md): Hypothesis design, bounded searches, evidence handling, closeout guidance, and a reusable plan template.
 - [Safe attack scenarios](docs/attack-scenarios.md): Non-destructive ransomware and consent-based phishing validation workflows.
+- [Sample security alerts](templates/sample-alerts.json): Synthetic SIEM-style ransomware and phishing events for documentation and mapping.
 - [Secure deployment](docs/secure-deployment.md): Docker hardening, runtime checks, and API-key lifecycle protection.
 - [Architecture overview](docs/architecture.md): Component flow, trust boundaries, and links to detailed security design.
 - [Security architecture and roadmap](docs/security-roadmap.md): Trust boundaries, safety principles, contribution workflow, planned improvements, and responsible disclosure.

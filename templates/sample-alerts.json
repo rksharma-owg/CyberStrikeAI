@@ -28,6 +28,33 @@
         "file-activity"
       ],
       "recommended_action": "Validate exercise ID and compare with the approved simulation window."
+    },
+    {
+      "id": "alert-sim-002",
+      "title": "Reported simulation message with controlled landing event",
+      "status": "triage",
+      "severity": "medium",
+      "category": "phishing-simulation",
+      "observed_at": "2030-01-01T11:00:00Z",
+      "source": {
+        "product": "example-mail-gateway",
+        "sensor_id": "gateway-example-01"
+      },
+      "asset": {
+        "hostname": "mail.example.test",
+        "environment": "authorized-lab"
+      },
+      "evidence": {
+        "sender_domain": "training.example.test",
+        "user_reported": true,
+        "credentials_collected": false
+      },
+      "tags": [
+        "simulation",
+        "email",
+        "user-report"
+      ],
+      "recommended_action": "Confirm the exercise identifier and preserve sanitized message headers."
     }
   ]
 }

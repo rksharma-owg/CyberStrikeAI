@@ -670,6 +670,7 @@ enabled: true
 - [API examples](docs/api-examples.md): Sample HTTP requests, `curl` commands, JSON responses, and safe token handling.
 - [Detection rule authoring](docs/detection-rules.md): Portable rule structure, validation workflow, review checklist, and sanitized example.
 - [Threat hunting workflow](docs/threat-hunting.md): Hypothesis design, bounded searches, evidence handling, closeout guidance, and a reusable plan template.
+- [Safe attack scenarios](docs/attack-scenarios.md): Non-destructive ransomware and consent-based phishing validation workflows.
 - [Architecture overview](docs/architecture.md): Component flow, trust boundaries, and links to detailed security design.
 - [Security architecture and roadmap](docs/security-roadmap.md): Trust boundaries, safety principles, contribution workflow, planned improvements, and responsible disclosure.
 - [Multi-agent mode (Eino)](docs/MULTI_AGENT_EINO.md): **Deep**, **Plan-Execute**, **Supervisor**, `agents/*.md`, `eino_skills` / `eino_middleware`, APIs, and chat/stream behavior.

@@ -46,3 +46,38 @@ ransomware-like sequence while preserving all original data.
 - Original files remain recoverable and unchanged.
 - Analysts can distinguish the simulation from real malicious activity.
 - Missed signals and noisy rules become assigned follow-up work.
+
+## Phishing Detection Workflow
+
+### Objective
+
+Validate mail filtering, reporting, identity telemetry, and analyst triage without
+collecting real credentials or sending messages outside an approved participant list.
+
+### Safe Sequence
+
+1. Obtain written approval for participants, timing, sender identity, and success
+   metrics.
+2. Use a reserved domain such as `example.com` in examples and a controlled internal
+   domain for the authorized exercise.
+3. Send a clearly bounded simulation message with a training landing page.
+4. Make the landing page reject and discard all entered values; record only a
+   synthetic event identifier needed for the exercise metric.
+5. Include an approved reporting path and verify that reported messages retain the
+   headers needed for triage.
+6. Correlate mail-gateway events, user reports, identity alerts, and synthetic landing
+   events by exercise identifier.
+7. End the exercise at the approved time, remove landing content, and publish
+   aggregate lessons without naming participants.
+
+### Review Questions
+
+- Did authentication and reputation controls label the message as expected?
+- Could analysts distinguish the controlled domain and exercise identifier?
+- Did the reporting workflow preserve headers and timestamps?
+- Were any real secrets or personal values retained?
+- Which controls need tuning, documentation, or additional telemetry?
+
+Do not impersonate real vendors, request passwords or MFA codes, use emotional
+pressure, or penalize participants. The goal is to improve systems and training, not
+to test individuals covertly.

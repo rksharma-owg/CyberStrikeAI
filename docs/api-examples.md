@@ -18,6 +18,19 @@ shell history.
 
 Example values such as `local-password`, `TOKEN`, and UUIDs below are placeholders.
 
+For automation, add bounded connection and request times. Retries should be limited
+to connection failures or idempotent requests unless the endpoint documents an
+idempotency mechanism:
+
+```bash
+curl --fail-with-body \
+  --connect-timeout 5 \
+  --max-time 30 \
+  --retry 2 \
+  --retry-connrefused \
+  "${BASE_URL}/api/auth/validate"
+```
+
 ## Log In
 
 Request:
@@ -121,6 +134,20 @@ curl --fail-with-body \
   "${BASE_URL}/api/conversations"
 ```
 
+The endpoint also supports search, project filtering, and explicit sorting. Encode
+query parameters rather than concatenating untrusted values into a URL:
+
+```bash
+curl --fail-with-body \
+  --get \
+  --header "Authorization: Bearer ${CYBERSTRIKE_TOKEN}" \
+  --data-urlencode "search=authorized lab" \
+  --data-urlencode "project_id=PROJECT_ID" \
+  --data-urlencode "sort_by=updated_at" \
+  --data-urlencode "limit=20" \
+  "${BASE_URL}/api/conversations"
+```
+
 Example response shape:
 
 ```json
@@ -157,6 +184,14 @@ An unsuccessful request may return an error object:
 }
 ```
 
+Handle status codes before parsing a success schema:
+
+- `400` indicates that request input should be corrected rather than retried.
+- `401` requires a new valid token; never log the rejected token.
+- `404` means the referenced resource is unavailable to the request.
+- `429`, when returned by a deployment or proxy, should use bounded backoff.
+- `5xx` may be transient, but retries must remain limited and safe for the method.
+
 Treat response bodies as potentially sensitive. Avoid verbose tracing in shared
 terminals, redact tokens before attaching output to an issue, and unset temporary
 credentials when finished:
@@ -164,3 +199,14 @@ credentials when finished:
 ```bash
 unset CYBERSTRIKE_TOKEN
 ```
+
+## Automation Checklist
+
+- Pin the expected scheme, host, and CA certificate.
+- Set connection and total request timeouts.
+- Validate required environment variables before making a request.
+- Keep bearer tokens in memory only as long as needed.
+- Encode query parameters and JSON bodies with appropriate tooling.
+- Parse response status before trusting the response body.
+- Log request identifiers and status, not credentials or full sensitive payloads.
+- Use read-only endpoints for health checks.

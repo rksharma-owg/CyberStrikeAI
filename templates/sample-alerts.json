@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "notice": "Synthetic examples only. Replace identifiers through an approved integration.",
+  "alerts": [
+    {
+      "id": "alert-sim-001",
+      "title": "Rapid file changes with simulation marker",
+      "status": "new",
+      "severity": "high",
+      "category": "ransomware-simulation",
+      "observed_at": "2030-01-01T10:00:00Z",
+      "source": {
+        "product": "example-edr",
+        "sensor_id": "sensor-example-01"
+      },
+      "asset": {
+        "hostname": "lab-endpoint.example.test",
+        "environment": "authorized-lab"
+      },
+      "evidence": {
+        "file_change_count": 25,
+        "marker_file": "SIMULATION_README.txt",
+        "destructive_action": false
+      },
+      "tags": [
+        "simulation",
+        "endpoint",
+        "file-activity"
+      ],
+      "recommended_action": "Validate exercise ID and compare with the approved simulation window."
+    },
+    {
+      "id": "alert-sim-002",
+      "title": "Reported simulation message with controlled landing event",
+      "status": "triage",
+      "severity": "medium",
+      "category": "phishing-simulation",
+      "observed_at": "2030-01-01T11:00:00Z",
+      "source": {
+        "product": "example-mail-gateway",
+        "sensor_id": "gateway-example-01"
+      },
+      "asset": {
+        "hostname": "mail.example.test",
+        "environment": "authorized-lab"
+      },
+      "evidence": {
+        "sender_domain": "training.example.test",
+        "user_reported": true,
+        "credentials_collected": false
+      },
+      "tags": [
+        "simulation",
+        "email",
+        "user-report"
+      ],
+      "recommended_action": "Confirm the exercise identifier and preserve sanitized message headers."
+    }
+  ]
+}

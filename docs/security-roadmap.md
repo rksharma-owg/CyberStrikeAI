@@ -94,7 +94,8 @@ testable pull requests.
 ### Observability and Evidence
 
 - Standardize correlation identifiers across conversations, tasks, and tool calls.
-- Make audit retention and export behavior easier to configure and verify.
+- Make audit retention easier to configure and define redaction plus integrity
+  verification requirements for exported evidence.
 - Add health indicators for external tools, MCP connections, and background tasks.
 
 ### Documentation and Integration

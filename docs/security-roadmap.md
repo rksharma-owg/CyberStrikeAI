@@ -54,6 +54,25 @@ The main responsibilities are:
 - Treat model output as untrusted input that requires validation at execution
   boundaries.
 
+## Contribution Workflow
+
+1. Start from the latest `main` and create a branch named for one focused change.
+2. Explain the security impact before implementation, including affected trust
+   boundaries, permissions, stored data, and failure modes.
+3. Keep commits reviewable: separate documentation, behavior, tests, and generated
+   files when that improves clarity.
+4. Run relevant tests and inspect the final diff for secrets, unsafe defaults, and
+   unrelated changes.
+5. Open a pull request that describes the motivation, implementation, validation,
+   operational impact, and rollback approach.
+6. Address review findings with follow-up commits so the discussion remains
+   traceable. Squash only when merging if a compact `main` history is preferred.
+
+Changes to authentication, HITL policy, command execution, MCP exposure, C2
+functionality, secret handling, or audit retention should receive explicit security
+review. Include documentation and tests for both allowed and denied behavior where
+applicable.
+
 ## Future Roadmap
 
 Roadmap work is grouped by outcome and should be delivered through reviewed,

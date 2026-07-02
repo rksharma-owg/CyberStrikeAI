@@ -210,3 +210,8 @@ unset CYBERSTRIKE_TOKEN
 - Parse response status before trusting the response body.
 - Log request identifiers and status, not credentials or full sensitive payloads.
 - Use read-only endpoints for health checks.
+
+A read-only, environment-driven example is available at
+[`examples/api/list-conversations.sh`](../examples/api/list-conversations.sh). Review
+it before use and provide tokens through the environment rather than editing them
+into the file.

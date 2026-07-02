@@ -1,0 +1,44 @@
+# Portable example only. This file is not loaded by CyberStrikeAI at runtime.
+id: web-missing-baseline-security-headers
+title: Public HTTPS Response Missing Baseline Security Headers
+status: experimental
+description: >
+  Identifies successful HTML responses from an approved public web scope when both
+  Content-Security-Policy and X-Content-Type-Options are absent.
+references:
+  - https://owasp.org/www-project-secure-headers/
+log_sources:
+  - product: normalized-http
+    service: response
+detection:
+  selection:
+    network.protocol: https
+    http.response.status_code:
+      - 200
+      - 201
+    http.response.content_type|starts_with: text/html
+    target.scope: authorized-public-web
+  missing_headers:
+    http.response.headers.content-security-policy|exists: false
+    http.response.headers.x-content-type-options|exists: false
+  condition: selection and missing_headers
+false_positives:
+  - Redirect landing pages normalized as successful HTML responses
+  - Approved legacy applications with a documented compensating control
+level: low
+tags:
+  - web.hardening
+  - owasp.secure_headers
+test_cases:
+  positive:
+    - fixture: html-response-without-baseline-headers.json
+      expected: match
+  negative:
+    - fixture: html-response-with-baseline-headers.json
+      expected: no-match
+    - fixture: out-of-scope-html-response.json
+      expected: no-match
+owner: application-security
+review:
+  interval_days: 180
+  notes: Confirm field names against the destination analytics platform.

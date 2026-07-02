@@ -29,6 +29,29 @@ If CyberStrikeAI helps you, you can support the project via **WeChat Pay** or **
 
 CyberStrikeAI is an **AI-native security testing platform** built in Go. It integrates 100+ security tools, an intelligent orchestration engine, role-based testing with predefined security roles, a skills system with specialized testing skills, comprehensive lifecycle management capabilities, and a **built-in lightweight C2 (Command & Control) framework** for **authorized** engagements (listeners, encrypted implants, sessions, tasks, real-time events, REST and MCP). Through native MCP protocol and AI agents, it enables end-to-end automation from conversational commands to vulnerability discovery, attack-chain analysis, knowledge retrieval, and result visualization—delivering an auditable, traceable, and collaborative testing environment for security teams.
 
+## Project Purpose
+
+CyberStrikeAI helps security teams coordinate authorized testing, combine repeatable
+tooling with AI-assisted workflows, and preserve evidence for review. It is intended
+for controlled security assessments, research environments, and defensive validation
+where the operator has explicit permission to test the target.
+
+## Safe Experiment Notes
+
+- Use an isolated lab or a clearly defined, authorized scope; never test systems you
+  do not own or have permission to assess.
+- Keep credentials and API keys out of commits. Store local values in approved secret
+  storage and review configuration files before sharing logs or examples.
+- Review generated commands before execution, start with low-impact checks, and keep
+  audit logs so actions can be traced and stopped if results differ from expectations.
+
+## How to Contribute
+
+Create a focused branch from the latest `main`, keep each change small and
+well-documented, and run the relevant checks before opening a pull request. Describe
+the problem and validation steps in the PR, avoid including sensitive test data, and
+update documentation when behavior or configuration changes.
+
 ## Interface & Integration Preview
 
 <div align="center">
@@ -712,5 +735,4 @@ CyberStrikeAI is a professional security testing platform designed to assist sec
 ---
 
 Need help or want to contribute? Open an issue or PR—community tooling additions are welcome!
-
 

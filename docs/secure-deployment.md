@@ -32,3 +32,19 @@ it only for authorized users and targets, with isolation appropriate to that ris
 - [ ] Logging avoids credentials and unnecessary target data.
 - [ ] Backup restoration and incident shutdown are tested.
 - [ ] Operators know how to revoke access and rotate secrets.
+
+## API Key Protection
+
+- Provision a dedicated key with the narrowest model and account permissions.
+- Inject secrets at runtime from an approved secret manager or protected environment;
+  never bake them into images or commit them to `config.yaml`.
+- Restrict secret access to the service identity and authorized administrators.
+- Prevent keys from appearing in command arguments, health endpoints, traces,
+  screenshots, exported conversations, and support bundles.
+- Rotate keys on a defined schedule and immediately after suspected exposure.
+- Monitor provider usage for unexpected models, volume, regions, or source addresses.
+- Test revocation and replacement without requiring an image rebuild.
+
+Before publishing logs or examples, search for provider key prefixes, authorization
+headers, session tokens, and private endpoint URLs. Treat redaction as a final safety
+check rather than the primary secret-control mechanism.

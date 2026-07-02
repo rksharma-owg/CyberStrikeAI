@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "notice": "Synthetic examples only. Replace identifiers through an approved integration.",
+  "alerts": [
+    {
+      "id": "alert-sim-001",
+      "title": "Rapid file changes with simulation marker",
+      "status": "new",
+      "severity": "high",
+      "category": "ransomware-simulation",
+      "observed_at": "2030-01-01T10:00:00Z",
+      "source": {
+        "product": "example-edr",
+        "sensor_id": "sensor-example-01"
+      },
+      "asset": {
+        "hostname": "lab-endpoint.example.test",
+        "environment": "authorized-lab"
+      },
+      "evidence": {
+        "file_change_count": 25,
+        "marker_file": "SIMULATION_README.txt",
+        "destructive_action": false
+      },
+      "tags": [
+        "simulation",
+        "endpoint",
+        "file-activity"
+      ],
+      "recommended_action": "Validate exercise ID and compare with the approved simulation window."
+    }
+  ]
+}

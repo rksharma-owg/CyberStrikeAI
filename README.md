@@ -4,6 +4,20 @@
 
 # CyberStrikeAI
 
+<div align="center">
+
+[![License](https://img.shields.io/github/license/rksharma-owg/CyberStrikeAI)](LICENSE)
+[![Go version](https://img.shields.io/github/go-mod/go-version/rksharma-owg/CyberStrikeAI)](go.mod)
+[![Last commit](https://img.shields.io/github/last-commit/rksharma-owg/CyberStrikeAI)](https://github.com/rksharma-owg/CyberStrikeAI/commits/main)
+[![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+**AI-assisted, auditable security testing for explicitly authorized environments.**
+
+[Quick start](#basic-usage) · [Architecture](docs/architecture.md) ·
+[API examples](docs/api-examples.md) · [Contributing](CONTRIBUTING.md) ·
+[Security policy](SECURITY.md)
+
+</div>
 
 [中文](README_CN.md) | [English](README.md)
 
@@ -656,6 +670,7 @@ enabled: true
 - [API examples](docs/api-examples.md): Sample HTTP requests, `curl` commands, JSON responses, and safe token handling.
 - [Detection rule authoring](docs/detection-rules.md): Portable rule structure, validation workflow, review checklist, and sanitized example.
 - [Threat hunting workflow](docs/threat-hunting.md): Hypothesis design, bounded searches, evidence handling, closeout guidance, and a reusable plan template.
+- [Architecture overview](docs/architecture.md): Component flow, trust boundaries, and links to detailed security design.
 - [Security architecture and roadmap](docs/security-roadmap.md): Trust boundaries, safety principles, contribution workflow, planned improvements, and responsible disclosure.
 - [Multi-agent mode (Eino)](docs/MULTI_AGENT_EINO.md): **Deep**, **Plan-Execute**, **Supervisor**, `agents/*.md`, `eino_skills` / `eino_middleware`, APIs, and chat/stream behavior.
 - [Robot / Chatbot guide (DingTalk & Lark)](docs/robot_en.md): Full setup, commands, and troubleshooting for using CyberStrikeAI from DingTalk or Lark on your phone. **Follow this doc to avoid common pitfalls.**

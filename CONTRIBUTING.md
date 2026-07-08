@@ -51,6 +51,32 @@ details in branch names.
 - [ ] Generated files and dependency changes are intentional.
 - [ ] The PR is focused enough to review and roll back safely.
 
+## Pull Request Workflow Examples
+
+Use the PR description to make the review path obvious. These examples are good
+starting points for common contribution types:
+
+### Documentation-only update
+
+- Summary: explain which guide, template, or README section changed.
+- Validation: run Markdown formatting checks if available and review links locally.
+- Risk: note whether examples are illustrative or tied to runtime behavior.
+- Rollback: revert the documentation commit if the guidance becomes inaccurate.
+
+### Security-sensitive change
+
+- Summary: describe the affected trust boundary, permission, or secret-handling path.
+- Validation: include tests, manual review steps, and any denied-case behavior.
+- Risk: list false-positive, false-negative, privacy, and operational impacts.
+- Rollback: identify the prior safe behavior and any configuration changes needed.
+
+### API or sample-data update
+
+- Summary: describe the endpoint, payload, or example being improved.
+- Validation: confirm JSON/YAML parses and commands use placeholder values.
+- Risk: state that examples are synthetic and safe for authorized lab use.
+- Rollback: revert the example or template without affecting application logic.
+
 ## Documentation and Examples
 
 Use placeholders for tokens, credentials, hostnames, and identifiers. Label portable

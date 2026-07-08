@@ -17,6 +17,20 @@ Useful contributions usually improve one of these areas:
 - Better examples that use synthetic data and placeholder credentials.
 - Tests or templates that make security-sensitive behavior easier to review.
 
+## Welcome Contribution Types
+
+Maintainers especially welcome small, focused changes that are easy to review and
+safe to merge:
+
+- Documentation fixes, setup clarifications, and broken-link repairs.
+- Synthetic examples for API payloads, alert templates, and safe lab workflows.
+- Tests for validation, authorization, audit, and denied-case behavior.
+- Improvements to contributor tooling, issue templates, or review checklists.
+- Accessibility and usability improvements for dashboards or documentation.
+
+Large feature proposals, security-sensitive behavior changes, and new tool
+integrations should start with an issue or discussion before implementation.
+
 ## Before You Start
 
 - Search existing issues and pull requests for related work.
@@ -68,6 +82,20 @@ vulnerabilities.
 
 See the [usage guide](docs/usage.md) for local setup and the
 [security roadmap](docs/security-roadmap.md) for architecture and trust boundaries.
+
+## Pull Request Process
+
+Before opening a pull request:
+
+1. Rebase or merge the latest `main` into your branch.
+2. Keep the diff focused on one reviewable change.
+3. Run relevant checks and note the exact validation steps in the PR description.
+4. Inspect the diff for secrets, private targets, generated files, and unrelated
+   formatting changes.
+5. Link related issues with `Closes #123` only when the PR fully resolves them.
+
+After opening a pull request, respond to review feedback with clear follow-up
+commits. Avoid rewriting shared history unless maintainers explicitly ask for it.
 
 ## Branch Naming Conventions
 

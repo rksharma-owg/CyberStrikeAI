@@ -99,6 +99,17 @@ testable pull requests.
 - Document operational recovery paths for misconfiguration, failed tool calls, and
   interrupted workflows.
 
+### Roadmap Review Cadence
+
+Roadmap items should be reviewed when major security workflows, MCP integrations,
+or execution boundaries change. During each review, maintainers should confirm:
+
+- The item still supports authorized defensive validation or safe lab use.
+- New examples use synthetic data and placeholder credentials.
+- Validation, logging, and rollback expectations are clear enough for reviewers.
+- The work can be delivered through small pull requests instead of large,
+  difficult-to-audit changes.
+
 ### Planned Security Modules
 
 - Prompt validation and safe execution review.
@@ -121,6 +132,17 @@ theft, or destructive activity.
 - Analyst review summaries that explain why a workflow is safe, risky, or blocked.
 - Suggested detection logic based on synthetic examples and documented telemetry.
 - False-positive review loops that improve rules without exposing private data.
+
+### Logging, Validation, and Audit Improvements
+
+- Define standard validation outcomes such as allowed, denied, needs review, and
+  out of scope.
+- Record reviewer decisions and approval context for high-impact workflows.
+- Add redaction checks for prompt text, command output, API payloads, and exported
+  evidence.
+- Preserve correlation identifiers across prompts, agent plans, tool calls, and
+  resulting findings.
+- Document retention expectations for audit events and generated artifacts.
 
 ## Roadmap Timeline
 

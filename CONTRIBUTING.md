@@ -25,6 +25,22 @@ security work safer, clearer, or more reliable.
 See the [usage guide](docs/usage.md) for local setup and the
 [security roadmap](docs/security-roadmap.md) for architecture and trust boundaries.
 
+## Branch Naming Conventions
+
+Use short, lowercase, hyphenated branch names that describe the change and its
+scope. Prefer one of these prefixes:
+
+- `docs/<topic>` for documentation-only improvements.
+- `feature/<scope>` for user-visible enhancements or new examples.
+- `fix/<scope>` for bug fixes or corrections to existing behavior.
+- `security/<scope>` for changes that affect trust boundaries, permissions,
+  secrets, disclosure workflows, or defensive controls.
+- `chore/<scope>` for repository maintenance that does not change behavior.
+
+Keep branches focused enough that reviewers can understand the risk quickly. Avoid
+including real target names, secrets, customer identifiers, or private assessment
+details in branch names.
+
 ## Pull Request Checklist
 
 - [ ] The change has a clear user or maintainer benefit.

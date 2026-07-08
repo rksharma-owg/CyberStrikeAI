@@ -114,6 +114,8 @@ criteria.
 ### Documentation and Integration
 
 - Maintain tested API request and response examples for common workflows.
+- Use the [prompt validation guide](prompt-validation.md) when designing
+  suspicious prompt handling for AI-assisted detection pipelines.
 - Document secure deployment patterns and backup or recovery procedures.
 - Expand contributor checks for documentation links and security-sensitive changes.
 

@@ -3,6 +3,20 @@
 Thank you for helping improve CyberStrikeAI. Contributions should make authorized
 security work safer, clearer, or more reliable.
 
+## Project Overview
+
+CyberStrikeAI is an AI-assisted security testing and orchestration project for
+explicitly authorized environments. The repository combines web interfaces, MCP
+integrations, security tooling, audit workflows, and documentation that help
+operators plan, execute, and review defensive validation work.
+
+Useful contributions usually improve one of these areas:
+
+- Safer defaults for authentication, approval, command execution, and audit trails.
+- Clearer documentation for authorized testing workflows and local setup.
+- Better examples that use synthetic data and placeholder credentials.
+- Tests or templates that make security-sensitive behavior easier to review.
+
 ## Before You Start
 
 - Search existing issues and pull requests for related work.
@@ -10,6 +24,36 @@ security work safer, clearer, or more reliable.
   boundaries, or user-facing behavior.
 - Report exploitable vulnerabilities privately according to [SECURITY.md](SECURITY.md).
 - Keep real credentials, customer data, and assessment evidence out of the repository.
+
+## Local Setup
+
+Use an isolated development environment and avoid pointing local tests at systems
+outside your authorized scope.
+
+1. Clone the repository and switch to a feature branch.
+2. Install the Go version declared in `go.mod`.
+3. Install any optional security tools only when they are needed for your change.
+4. Copy local configuration from documented examples instead of committing secrets.
+5. Run relevant tests, linters, or documentation checks before opening a pull
+   request.
+
+For setup details and safe example commands, see the [usage guide](docs/usage.md).
+
+## Reporting Issues
+
+Open a GitHub issue for bugs, documentation gaps, safe enhancement ideas, or
+reproducible unexpected behavior. A useful issue includes:
+
+- The affected area, such as API examples, MCP integration, dashboard behavior, or
+  documentation.
+- Expected behavior and actual behavior.
+- Safe reproduction steps using placeholder hosts, synthetic data, or a lab target.
+- Environment details such as operating system, Go version, and relevant tool
+  versions.
+- Security impact, if any, without posting secrets or exploit details.
+
+Use the private reporting process in [SECURITY.md](SECURITY.md) for suspected
+vulnerabilities.
 
 ## Development Workflow
 
@@ -82,6 +126,14 @@ starting points for common contribution types:
 Use placeholders for tokens, credentials, hostnames, and identifiers. Label portable
 templates that are not consumed by the application at runtime. Commands should be
 bounded, minimally privileged, and safe for an authorized lab by default.
+
+## Responsible Use Statement
+
+CyberStrikeAI should only be used where the operator has explicit permission to
+test, monitor, or validate the target environment. Contributions must not include
+instructions that encourage unauthorized access, credential theft, persistence,
+evasion, or destructive activity. Prefer defensive framing, clear authorization
+checks, and human review for high-impact workflows.
 
 ## Security-Sensitive Changes
 

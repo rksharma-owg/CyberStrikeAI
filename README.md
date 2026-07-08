@@ -14,8 +14,8 @@
 **AI-assisted, auditable security testing for explicitly authorized environments.**
 
 [Quick start](#basic-usage) · [Architecture](docs/architecture.md) ·
-[API examples](docs/api-examples.md) · [Contributing](CONTRIBUTING.md) ·
-[Security policy](SECURITY.md)
+[Roadmap](docs/security-roadmap.md) · [API examples](docs/api-examples.md) ·
+[Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md)
 
 </div>
 

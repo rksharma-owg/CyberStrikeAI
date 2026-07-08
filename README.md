@@ -675,7 +675,7 @@ enabled: true
 - [Secure deployment](docs/secure-deployment.md): Docker hardening, runtime checks, and API-key lifecycle protection.
 - [Prompt validation](docs/prompt-validation.md): Safe and unsafe prompt examples, validation checklist, execution boundaries, and audit recommendations.
 - [Architecture overview](docs/architecture.md): Component flow, trust boundaries, and links to detailed security design.
-- [Security architecture and roadmap](docs/security-roadmap.md): Trust boundaries, safety principles, contribution workflow, planned improvements, and responsible disclosure.
+- [Security architecture and roadmap](docs/security-roadmap.md): Trust boundaries, safe testing scope, planned security modules, AI-assisted workflow ideas, audit improvements, and responsible disclosure.
 - [Multi-agent mode (Eino)](docs/MULTI_AGENT_EINO.md): **Deep**, **Plan-Execute**, **Supervisor**, `agents/*.md`, `eino_skills` / `eino_middleware`, APIs, and chat/stream behavior.
 - [Robot / Chatbot guide (DingTalk & Lark)](docs/robot_en.md): Full setup, commands, and troubleshooting for using CyberStrikeAI from DingTalk or Lark on your phone. **Follow this doc to avoid common pitfalls.**
 

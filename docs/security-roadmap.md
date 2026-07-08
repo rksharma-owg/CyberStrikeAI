@@ -78,6 +78,19 @@ applicable.
 Roadmap work is grouped by outcome and should be delivered through reviewed,
 testable pull requests.
 
+## Roadmap Timeline
+
+This timeline is planning guidance, not a delivery commitment. Dates should be
+added only when maintainers have agreed on scope, ownership, and validation
+criteria.
+
+| Stage | Focus | Example outcomes |
+| --- | --- | --- |
+| Now | Documentation, safe examples, and review workflows | Clear contribution guidance, safe attack-scenario examples, synthetic alert templates, and secure deployment notes |
+| Next | Dashboard planning and API validation | Security Dashboard UI requirements, tested API examples, schema validation, and improved prompt-safety review patterns |
+| Later | Evidence integrity and operational hardening | Export integrity checks, audit retention controls, stronger secret redaction, and expanded tool health indicators |
+| Ongoing | Community and security hygiene | Responsible disclosure handling, dependency updates, issue triage, and reviewer-friendly pull requests |
+
 ### Safer Execution
 
 - Expand policy controls for target scope, command risk, and network boundaries.

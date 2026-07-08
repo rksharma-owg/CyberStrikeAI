@@ -25,6 +25,22 @@ security work safer, clearer, or more reliable.
 See the [usage guide](docs/usage.md) for local setup and the
 [security roadmap](docs/security-roadmap.md) for architecture and trust boundaries.
 
+## Branch Naming Conventions
+
+Use short, lowercase, hyphenated branch names that describe the change and its
+scope. Prefer one of these prefixes:
+
+- `docs/<topic>` for documentation-only improvements.
+- `feature/<scope>` for user-visible enhancements or new examples.
+- `fix/<scope>` for bug fixes or corrections to existing behavior.
+- `security/<scope>` for changes that affect trust boundaries, permissions,
+  secrets, disclosure workflows, or defensive controls.
+- `chore/<scope>` for repository maintenance that does not change behavior.
+
+Keep branches focused enough that reviewers can understand the risk quickly. Avoid
+including real target names, secrets, customer identifiers, or private assessment
+details in branch names.
+
 ## Pull Request Checklist
 
 - [ ] The change has a clear user or maintainer benefit.
@@ -34,6 +50,32 @@ See the [usage guide](docs/usage.md) for local setup and the
 - [ ] No secrets, private targets, or sensitive evidence are present.
 - [ ] Generated files and dependency changes are intentional.
 - [ ] The PR is focused enough to review and roll back safely.
+
+## Pull Request Workflow Examples
+
+Use the PR description to make the review path obvious. These examples are good
+starting points for common contribution types:
+
+### Documentation-only update
+
+- Summary: explain which guide, template, or README section changed.
+- Validation: run Markdown formatting checks if available and review links locally.
+- Risk: note whether examples are illustrative or tied to runtime behavior.
+- Rollback: revert the documentation commit if the guidance becomes inaccurate.
+
+### Security-sensitive change
+
+- Summary: describe the affected trust boundary, permission, or secret-handling path.
+- Validation: include tests, manual review steps, and any denied-case behavior.
+- Risk: list false-positive, false-negative, privacy, and operational impacts.
+- Rollback: identify the prior safe behavior and any configuration changes needed.
+
+### API or sample-data update
+
+- Summary: describe the endpoint, payload, or example being improved.
+- Validation: confirm JSON/YAML parses and commands use placeholder values.
+- Risk: state that examples are synthetic and safe for authorized lab use.
+- Rollback: revert the example or template without affecting application logic.
 
 ## Documentation and Examples
 

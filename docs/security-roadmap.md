@@ -78,6 +78,50 @@ applicable.
 Roadmap work is grouped by outcome and should be delivered through reviewed,
 testable pull requests.
 
+### Short-Term Goals
+
+- Keep README, usage, deployment, and contribution documentation aligned with
+  current safe-testing expectations.
+- Maintain synthetic examples for alerts, prompts, and API payloads so contributors
+  do not need real assessment data.
+- Improve validation guidance for prompts, tool calls, and security-sensitive
+  workflows before they reach execution boundaries.
+- Make documentation changes small, reviewable, and easy to roll back.
+
+### Medium-Term Goals
+
+- Expand dashboard planning for approval queues, sensitive action history, and
+  security posture summaries.
+- Add stronger validation around API request examples, exported evidence, and
+  audit log retention settings.
+- Improve integration guidance for MCP clients and external security tools in
+  isolated lab environments.
+- Document operational recovery paths for misconfiguration, failed tool calls, and
+  interrupted workflows.
+
+### Planned Security Modules
+
+- Prompt validation and safe execution review.
+- API key and secret handling checks.
+- Audit-log integrity and retention review.
+- Security Dashboard UI planning.
+- Synthetic SIEM alert examples for defensive detection testing.
+
+### Safe Testing Scope
+
+CyberStrikeAI roadmap work should assume explicit authorization, controlled lab
+targets, synthetic examples, and least-privilege credentials. Roadmap items should
+avoid instructions that enable unauthorized access, persistence, evasion, data
+theft, or destructive activity.
+
+### Future AI-Assisted Security Features
+
+- Context-aware prompt validation that separates user intent, evidence, and tool
+  execution authority.
+- Analyst review summaries that explain why a workflow is safe, risky, or blocked.
+- Suggested detection logic based on synthetic examples and documented telemetry.
+- False-positive review loops that improve rules without exposing private data.
+
 ## Roadmap Timeline
 
 This timeline is planning guidance, not a delivery commitment. Dates should be

@@ -673,7 +673,7 @@ enabled: true
 - [Safe attack scenarios](docs/attack-scenarios.md): Non-destructive ransomware and consent-based phishing validation workflows.
 - [Sample security alerts](templates/sample-alerts.json): Synthetic SIEM-style ransomware and phishing events for documentation and mapping.
 - [Secure deployment](docs/secure-deployment.md): Docker hardening, runtime checks, and API-key lifecycle protection.
-- [Prompt validation](docs/prompt-validation.md): Safe and unsafe prompt examples, validation checklist, execution boundaries, and audit recommendations.
+- [Prompt validation](docs/prompt-validation.md): Why validation matters, safe and unsafe prompt examples, execution boundaries, responsible testing guidance, and audit recommendations.
 - [Architecture overview](docs/architecture.md): Component flow, trust boundaries, and links to detailed security design.
 - [Security architecture and roadmap](docs/security-roadmap.md): Trust boundaries, safe testing scope, planned security modules, AI-assisted workflow ideas, audit improvements, and responsible disclosure.
 - [Multi-agent mode (Eino)](docs/MULTI_AGENT_EINO.md): **Deep**, **Plan-Execute**, **Supervisor**, `agents/*.md`, `eino_skills` / `eino_middleware`, APIs, and chat/stream behavior.

@@ -4,6 +4,18 @@ AI-assisted threat detection should treat suspicious prompts as untrusted eviden
 not as instructions to execute. This guide summarizes safe validation patterns for
 pipelines that classify prompts, enrich alerts, or support analyst decisions.
 
+## Why Prompt Validation Matters
+
+Natural-language prompts can mix legitimate operator intent, untrusted evidence,
+ambiguous targets, and requests for high-impact security actions. Without a
+validation layer, a system may accidentally treat suspicious text as trusted
+instructions, over-escalate benign activity, expose secrets in logs, or run tools
+outside the approved scope.
+
+Prompt validation reduces that risk by confirming authorization, normalizing
+inputs, separating model judgment from execution authority, and preserving an audit
+trail that reviewers can inspect later.
+
 ## Safe Prompt Examples
 
 Safe prompts are scoped, authorized, and reviewable. They use placeholders or
@@ -115,6 +127,17 @@ by prompt content alone.
 - Encoded, multilingual, or obfuscated examples.
 - False-positive regression cases from analyst review.
 - Synthetic phishing and ransomware prompts used only in authorized lab contexts.
+
+## Responsible Testing Guidance
+
+- Use isolated labs, synthetic prompts, and placeholder targets when testing
+  validation behavior.
+- Do not paste real secrets, customer records, private assessment evidence, or
+  production incident data into examples.
+- Keep validation tests defensive: they should demonstrate detection, denial,
+  review, or logging behavior rather than provide operational misuse steps.
+- Confirm human approval requirements before testing workflows that could affect
+  accounts, hosts, credentials, or external notifications.
 
 The safest pattern is to validate structure first, classify second, corroborate
 third, and require review before enforcement.

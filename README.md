@@ -675,6 +675,7 @@ enabled: true
 - [Secure deployment](docs/secure-deployment.md): Docker hardening, runtime checks, and API-key lifecycle protection.
 - [Prompt validation](docs/prompt-validation.md): Why validation matters, safe and unsafe prompt examples, execution boundaries, responsible testing guidance, and audit recommendations.
 - [Operator review checklist](docs/operator-review-checklist.md): Scope, prompt, approval, evidence, and closeout checks for authorized workflows.
+- [Audit event field guide](docs/audit-event-fields.md): Common audit fields, review outcomes, evidence references, and safe synthetic examples.
 - [Architecture overview](docs/architecture.md): Component flow, trust boundaries, and links to detailed security design.
 - [Security architecture and roadmap](docs/security-roadmap.md): Trust boundaries, safe testing scope, planned security modules, AI-assisted workflow ideas, audit improvements, and responsible disclosure.
 - [Multi-agent mode (Eino)](docs/MULTI_AGENT_EINO.md): **Deep**, **Plan-Execute**, **Supervisor**, `agents/*.md`, `eino_skills` / `eino_middleware`, APIs, and chat/stream behavior.
